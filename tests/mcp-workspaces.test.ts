@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { answerInFull } from "@/app/mcp/answer-in-full";
-import { POST } from "@/app/mcp/route";
+import { answerInFull } from "@/app/api/mcp/answer-in-full";
+import { POST } from "@/app/api/mcp/route";
 import { listTickets } from "@/application/ticket-queries";
 import type { Services } from "@/application/services";
 import { removeMember } from "@/application/team";
@@ -26,8 +26,8 @@ vi.mock("@/infrastructure/auth/server", () => ({
 vi.mock("@/infrastructure/db/client", async (original) => ({ ...(await original<typeof import("@/infrastructure/db/client")>()), db: () => (shared.services as Services).db }));
 vi.mock("@/infrastructure/env", async (original) => ({ ...(await original<typeof import("@/infrastructure/env")>()), env: () => shared.settings }));
 vi.mock("@/infrastructure/services", () => ({ appServices: () => shared.services }));
-vi.mock("@/app/mcp/answer-in-full", async (original) => {
-  const real = await original<typeof import("@/app/mcp/answer-in-full")>();
+vi.mock("@/app/api/mcp/answer-in-full", async (original) => {
+  const real = await original<typeof import("@/app/api/mcp/answer-in-full")>();
   return { answerInFull: vi.fn(real.answerInFull) };
 });
 
@@ -44,10 +44,10 @@ beforeEach(() => {
   token.userId = null;
 });
 
-/** Speaks to /mcp over HTTP, as an assistant does: the real route, with only the token's signature assumed. */
+/** Speaks to /api/mcp over HTTP, as an assistant does: the real route, with only the token's signature assumed. */
 async function send(message: unknown) {
   const response = await POST(
-    new Request("https://succuro.test/mcp", {
+    new Request("https://succuro.test/api/mcp", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: "Bearer token", accept: "application/json, text/event-stream", "mcp-protocol-version": "2025-06-18" },
       body: JSON.stringify(message),
@@ -240,7 +240,7 @@ describe("an assistant, for a member with one workspace", () => {
   });
 });
 
-describe("/mcp at its door", () => {
+describe("/api/mcp at its door", () => {
   it("answers 401 without a token, pointing at how to sign in", async () => {
     const { status, body } = await send({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} });
     expect(status).toBe(401);

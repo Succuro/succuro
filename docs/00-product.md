@@ -73,7 +73,7 @@ The page reads through a list of what a requester may see: their own words and r
 
 ## 5. Assistants
 
-The MCP server is at `/mcp`, over streamable HTTP. An assistant registers itself, a member signs in and approves it, and every tool runs as that member with the same rules as the screens: each is the same use case the screens call.
+The MCP server is at `/api/mcp`, over streamable HTTP. An assistant registers itself, a member signs in and approves it, and every tool runs as that member with the same rules as the screens: each is the same use case the screens call.
 
 | Tool | What it does |
 |---|---|

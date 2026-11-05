@@ -1,6 +1,6 @@
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import { beforeAll, describe, expect, it } from "vitest";
-import { supportServer } from "@/app/mcp/server";
+import { supportServer } from "@/app/api/mcp/server";
 import { recordInboundMail } from "@/application/inbound-mail";
 import { addSavedReply } from "@/application/saved-replies";
 import type { Services } from "@/application/services";
@@ -23,7 +23,7 @@ function clientFor(workspaceId: string, userId: string) {
   const handler = createMcpHandler(() => supportServer({ services, userId, workspaces: [{ id: workspaceId, name: "Northwind", role: "owner" }] }));
   return async function call(method: string, params: Record<string, unknown> = {}) {
     const response = await handler.fetch(
-      new Request("https://succuro.test/mcp", {
+      new Request("https://succuro.test/api/mcp", {
         method: "POST",
         headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": "2025-06-18" },
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),

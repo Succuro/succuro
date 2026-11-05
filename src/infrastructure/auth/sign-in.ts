@@ -1,0 +1,53 @@
+import { BRAND } from "@/domain/brand";
+import { isAdmin, type Env } from "../env";
+
+type SignInSettings = Pick<Env, "OIDC_ISSUER" | "OIDC_CLIENT_ID" | "OIDC_CLIENT_SECRET" | "OIDC_NAME" | "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET" | "SUCCURO_PASSWORD_SIGN_IN">;
+
+/** A company's identity provider, as Better Auth knows it: members come back to /api/auth/callback/oidc. */
+const COMPANY_PROVIDER = "oidc";
+
+/** The company's identity provider (any OpenID Connect server), when all of it is set. */
+export function companyLogin(settings: Pick<SignInSettings, "OIDC_ISSUER" | "OIDC_CLIENT_ID" | "OIDC_CLIENT_SECRET" | "OIDC_NAME">) {
+  const { OIDC_ISSUER: issuer, OIDC_CLIENT_ID: clientId, OIDC_CLIENT_SECRET: clientSecret } = settings;
+  if (!issuer || !clientId || !clientSecret) return null;
+  // Basic is OpenID Connect's default for a client with a secret: a server may refuse any other method for it.
+  return { providerId: COMPANY_PROVIDER, name: settings.OIDC_NAME, discoveryUrl: `${issuer}/.well-known/openid-configuration`, clientId, clientSecret, scopes: ["openid", "profile", "email"], authentication: "basic" as const };
+}
+
+export interface SignInMethods {
+  provider: { id: string; name: string } | null;
+  passwords: boolean;
+}
+
+/** The ways into this instance: its company's provider alone when it has one, otherwise Google and passwords as they are set up. */
+export function signInOf(settings: SignInSettings): SignInMethods {
+  if (companyLogin(settings)) return { provider: { id: COMPANY_PROVIDER, name: settings.OIDC_NAME }, passwords: false };
+  const google = settings.GOOGLE_CLIENT_ID && settings.GOOGLE_CLIENT_SECRET;
+  return { provider: google ? { id: "google", name: "Google" } : null, passwords: settings.SUCCURO_PASSWORD_SIGN_IN };
+}
+
+/**
+ * Whether a provider's account may be created: for an address on the
+ * list or with an invitation still good. Both trust the address, so the provider must have verified
+ * it: an identity server may let anyone type any address.
+ */
+export const mayJoin = (person: { email: string; emailVerified?: boolean | null }, invited = false) => person.emailVerified === true && (invited || isAdmin(person.email));
+
+const CLOSED = `${BRAND} is open to invited people only on this instance.`;
+
+/**
+ * Why an account can't be created with a password, if it can't. The address isn't proved yet: the
+ * link mailed afterwards proves it and sign-in stays closed until then, so without mail nobody could ever get in.
+ */
+export function passwordSignUpRefusal(email: string, settings: Pick<Env, "RESEND_API_KEY">, invited = false): string | null {
+  if (!invited && !isAdmin(email)) return CLOSED;
+  return settings.RESEND_API_KEY ? null : `${BRAND} can’t send the confirmation link yet: try again later.`;
+}
+
+const IGNORE_IT = "If you didn’t ask for this, ignore this message.";
+
+/** The mails that prove an address is someone's: the link is the proof, so nothing else may be needed to use it. */
+export const accountMail = {
+  confirm: (url: string) => ({ subject: `Confirm your address for ${BRAND}`, text: `Hello,\n\nTo activate your ${BRAND} account, open this link:\n${url}\n\n${IGNORE_IT} No account will be activated.` }),
+  reset: (url: string) => ({ subject: `Your ${BRAND} password`, text: `Hello,\n\nTo choose a new password, open this link:\n${url}\n\n${IGNORE_IT} Your password won’t change.` }),
+};

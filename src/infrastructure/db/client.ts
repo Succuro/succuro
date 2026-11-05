@@ -1,0 +1,28 @@
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { env } from "../env";
+import * as auth from "./schema/auth";
+import * as connections from "./schema/connections";
+import * as support from "./schema/support";
+import * as tenancy from "./schema/tenancy";
+
+/** Every area's tables, as Drizzle is told the database holds them. */
+export const schema = { ...auth, ...tenancy, ...connections, ...support };
+
+export type Database = PgDatabase<PgQueryResultHKT, typeof schema>;
+
+export const DRIZZLE_CASING = "snake_case";
+
+export function connect(url: string): Database {
+  // prepare: false keeps it compatible with transaction-mode poolers (Neon, PgBouncer).
+  return drizzle(postgres(url, { prepare: false, max: 5 }), { schema, casing: DRIZZLE_CASING });
+}
+
+const globalForDb = globalThis as unknown as { appDb?: Database };
+
+/** The shared connection; reused across hot reloads in development. */
+export function db(): Database {
+  globalForDb.appDb ??= connect(env().SUCCURO_DATABASE_URL);
+  return globalForDb.appDb;
+}

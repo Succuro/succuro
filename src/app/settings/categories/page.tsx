@@ -4,7 +4,7 @@ import { categoriesOf } from "@/application/categories";
 import { Loading, PageHeading, Shell } from "@/components/shell";
 import { SettingsNav } from "@/components/settings-nav";
 import { ActionForm, ConfirmButton } from "@/components/try-button";
-import { Card, FIELD } from "@/components/ui";
+import { Card, EmptyState, FIELD } from "@/components/ui";
 import { currentSeat } from "@/infrastructure/auth/session";
 import { db } from "@/infrastructure/db/client";
 import { addCategoryAction, removeCategoryAction } from "./actions";
@@ -26,6 +26,7 @@ async function Content() {
           ))}
         </ul>
       )}
+      {categories.length === 0 && <EmptyState title="No category yet">Categories sort tickets by what they’re about: Billing, Bug, Account. Add the first one below.</EmptyState>}
       <Card>
         <ActionForm action={addCategoryAction} submit="Add the category" busy="…" quiet>
           <input name="name" required maxLength={60} placeholder="Refunds" aria-label="Category name" className={FIELD} />

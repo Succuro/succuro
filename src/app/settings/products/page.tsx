@@ -4,7 +4,7 @@ import { productsOf, type Product } from "@/application/products";
 import { Loading, PageHeading, Shell } from "@/components/shell";
 import { SettingsNav } from "@/components/settings-nav";
 import { ActionForm, ConfirmButton, CopyButton } from "@/components/try-button";
-import { Card, Code, FIELD, Labelled } from "@/components/ui";
+import { Card, Code, EmptyState, FIELD, Labelled } from "@/components/ui";
 import { managesSettings } from "@/domain/team";
 import { currentSeat } from "@/infrastructure/auth/session";
 import { db } from "@/infrastructure/db/client";
@@ -83,7 +83,7 @@ async function Content() {
       {products.map((product) => (
         <ProductCard key={product.id} product={product} origin={origin} mayChange={mayChange} />
       ))}
-      {products.length === 0 && <p className="text-sm text-muted-foreground">No product yet. Add the first one: its tickets, address and widget all start here.</p>}
+      {products.length === 0 && <EmptyState title="No product yet">Add the first one: its tickets, address and widget all start here.</EmptyState>}
       {mayChange ? (
         <Card>
           <h2 className="mb-4 font-bold tracking-[-0.015em]">Add a product</h2>

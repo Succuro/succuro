@@ -23,6 +23,16 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
   return <div className={`rounded-2xl border bg-card p-6 ${className}`}>{children}</div>;
 }
 
+/** What a list shows with nothing in it: what belongs here, and how the first one gets there. */
+export function EmptyState({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-input px-6 py-8 text-center">
+      <p className="font-heading font-bold tracking-[-0.015em]">{title}</p>
+      <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">{children}</p>
+    </div>
+  );
+}
+
 /** Whether a connection works, at a glance. */
 export function StatusDot({ status }: { status: "connected" | "failing" }) {
   return <span aria-hidden className={`inline-block size-2 shrink-0 rounded-full ${status === "connected" ? "bg-calm" : "bg-alert"}`} />;

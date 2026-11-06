@@ -4,7 +4,7 @@ import { savedRepliesOf } from "@/application/saved-replies";
 import { Loading, PageHeading, Shell } from "@/components/shell";
 import { SettingsNav } from "@/components/settings-nav";
 import { ActionForm, ConfirmButton } from "@/components/try-button";
-import { Card, FIELD, Labelled } from "@/components/ui";
+import { Card, EmptyState, FIELD, Labelled } from "@/components/ui";
 import { currentSeat } from "@/infrastructure/auth/session";
 import { db } from "@/infrastructure/db/client";
 import { addSavedReplyAction, removeSavedReplyAction } from "./actions";
@@ -25,6 +25,7 @@ async function Content() {
           <p className="mt-2 text-sm whitespace-pre-wrap text-muted-foreground">{reply.body}</p>
         </Card>
       ))}
+      {replies.length === 0 && <EmptyState title="No saved reply yet">Keep the answers you give again and again here. The reply box and assistants can both use them.</EmptyState>}
       <Card>
         <h2 className="mb-4 font-bold tracking-[-0.015em]">Add a saved reply</h2>
         <ActionForm action={addSavedReplyAction} submit="Save" busy="…">

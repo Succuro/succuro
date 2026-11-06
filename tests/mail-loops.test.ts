@@ -59,14 +59,14 @@ const MACHINES: [string, Parameters<typeof inboundEmail>[0]][] = [
 describe("a machine's mail that answers nothing", () => {
   it.each(MACHINES)("with %s opens no ticket, and sends nothing", async (_, overrides) => {
     const { workspaceId, services, calls } = await desk();
-    expect(await recordInboundMail(services, workspaceId, inboundEmail(overrides))).toBe("ignored");
+    expect(await recordInboundMail(services, workspaceId, inboundEmail(overrides))).toBe("screened");
     expect(await ticketsOf(workspaceId)).toEqual([]);
     expect(everythingSent(calls)).toEqual([]);
   });
 
   it("opens nothing however many come", async () => {
     const { workspaceId, services, calls } = await desk();
-    for (let sent = 0; sent < 25; sent++) expect(await recordInboundMail(services, workspaceId, inboundEmail({ headers: { "auto-submitted": "auto-replied" }, subject: `Out of office ${sent}` }))).toBe("ignored");
+    for (let sent = 0; sent < 25; sent++) expect(await recordInboundMail(services, workspaceId, inboundEmail({ headers: { "auto-submitted": "auto-replied" }, subject: `Out of office ${sent}` }))).toBe("screened");
     expect(await ticketsOf(workspaceId)).toEqual([]);
     expect(everythingSent(calls)).toEqual([]);
   });
@@ -132,10 +132,10 @@ describe("a reply and what answers it", () => {
 });
 
 describe("our own mail coming back", () => {
-  it("is ignored from a product's address, with or without a token", async () => {
+  it("waits in Screened from a product's address, with or without a token, and opens nothing", async () => {
     const { workspaceId, services, calls } = await desk();
-    expect(await recordInboundMail(services, workspaceId, inboundEmail({ from: "support@acme.example" }))).toBe("ignored");
-    expect(await recordInboundMail(services, workspaceId, inboundEmail({ from: "support+abc@acme.example" }))).toBe("ignored");
+    expect(await recordInboundMail(services, workspaceId, inboundEmail({ from: "support@acme.example" }))).toBe("screened");
+    expect(await recordInboundMail(services, workspaceId, inboundEmail({ from: "support+abc@acme.example" }))).toBe("screened");
     expect(await ticketsOf(workspaceId)).toEqual([]);
     expect(everythingSent(calls)).toEqual([]);
   });
@@ -149,7 +149,7 @@ describe("our own mail coming back", () => {
 
   it("is recognised by its own headers even when it's been forwarded from somewhere else", async () => {
     const { workspaceId, services, calls } = await desk();
-    expect(await recordInboundMail(services, workspaceId, inboundEmail({ from: "forwarder@elsewhere.example", headers: { "auto-submitted": "auto-generated", "x-auto-response-suppress": "All" } }))).toBe("ignored");
+    expect(await recordInboundMail(services, workspaceId, inboundEmail({ from: "forwarder@elsewhere.example", headers: { "auto-submitted": "auto-generated", "x-auto-response-suppress": "All" } }))).toBe("screened");
     expect(everythingSent(calls)).toEqual([]);
   });
 
@@ -181,7 +181,7 @@ describe("through the webhook itself", () => {
     ["a mailer-daemon, with a display name", mail("a3", { From: "Mail Delivery System <MAILER-DAEMON@mx.customer.example>" }, "MAILER-DAEMON@mx.customer.example"), "a3"],
   ])("takes %s in, and nothing comes of it", async (_, route, id) => {
     const { workspaceId, services, calls, connectionId, token } = await hooked([route]);
-    expect(await receiveHook(services, connectionId, token, signedRequest(RECEIVED(id), { id: `msg_${id}` }))).toEqual({ status: 200, body: "ignored" });
+    expect(await receiveHook(services, connectionId, token, signedRequest(RECEIVED(id), { id: `msg_${id}` }))).toEqual({ status: 200, body: "screened" });
     expect(await ticketsOf(workspaceId)).toEqual([]);
     expect(everythingSent(calls)).toEqual([]);
   });

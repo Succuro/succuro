@@ -1,11 +1,13 @@
 import { asc, eq, inArray, or } from "drizzle-orm";
-import { isAutomatedMail, parseAddress, replyTokenIn, senderLooksForged, withoutPlus, withoutQuotedReply } from "@/domain/email";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import { flaggedByMailService, isAutomatedMail, parseAddress, replyTokenIn, senderLooksForged, withoutPlus, withoutQuotedReply } from "@/domain/email";
+import { decideNewMail, routeOf, type AddressRule, type ScreenReason } from "@/domain/mail-routing";
 import { BODY_MAX, oneLine, SUBJECT_MAX } from "@/domain/ticket-input";
 import { sameSecret } from "@/infrastructure/crypto/secrets";
 import { ProviderError } from "@/infrastructure/connectors/http";
 import type { Database } from "@/infrastructure/db/client";
 import { connection } from "@/infrastructure/db/schema/connections";
-import { message, product, ticket } from "@/infrastructure/db/schema/support";
+import { message, screenedMail, ticket } from "@/infrastructure/db/schema/support";
 import { withWorkspace } from "@/infrastructure/db/tenant";
 import { clientOf } from "./connections";
 import { contactFor } from "./contacts";
@@ -13,6 +15,7 @@ import { requesterWrote } from "./conversation";
 import { recordDeliveryReport } from "./delivery-reports";
 import { notifyTeam, type TeamNotice } from "./notifications";
 import type { InboundEmail, InboundRequest } from "./ports";
+import { addressRulesOf } from "./product-addresses";
 import type { Services } from "./services";
 import { openTicketIn } from "./tickets";
 
@@ -20,7 +23,8 @@ export type HookAnswer = { status: number; body?: string };
 
 /** What the mail said, within what a message may hold: cut plainly rather than dropped when it's too long. */
 function bodyOf(text: string, isReply: boolean): string {
-  const said = (isReply ? withoutQuotedReply(text) : text).trim();
+  // A NUL can't be stored: left in, the mail would fail for ever and be lost.
+  const said = (isReply ? withoutQuotedReply(text) : text).replaceAll("\u0000", "").trim();
   if (!said) return "(This mail had no text.)";
   return said.length > BODY_MAX ? `${said.slice(0, BODY_MAX)}\n\n(This mail was cut here: it was longer than a message can hold.)` : said;
 }
@@ -54,23 +58,12 @@ async function ticketOfMail(tx: Database, email: InboundEmail) {
   return byHeader ?? null;
 }
 
-/** The product a new mail is for, by the address it was sent to; with one product there's nothing to work out. */
-async function productOfMail(tx: Database, email: InboundEmail): Promise<string | null> {
-  const products = await tx.select({ id: product.id, address: product.supportAddress }).from(product);
-  const addressed = new Set(email.addressedTo.map(withoutPlus));
-  const byAddress = products.find(({ address }) => address && addressed.has(address));
-  return byAddress?.id ?? (products.length === 1 ? products[0].id : null);
-}
-
-/** A product's address, or the instance's own, whose notifications may come back if a team's address is a support address. */
-async function isOwnAddress(tx: Database, from: string, settings: Services["settings"]): Promise<boolean> {
-  if (parseAddress(settings.SUCCURO_MAIL_FROM ?? "")?.address === from) return true;
-  return (await tx.select({ id: product.id }).from(product).where(eq(product.supportAddress, withoutPlus(from)))).length > 0;
-}
-
+/** Known already, as a message on a ticket or as screened mail, whatever a member decided about it. */
 async function alreadyRecorded(tx: Database, email: InboundEmail): Promise<boolean> {
-  const sameMail = or(eq(message.providerId, email.providerId), email.messageId ? eq(message.emailMessageId, email.messageId) : undefined);
-  return (await tx.select({ id: message.id }).from(message).where(sameMail).orderBy(asc(message.id)).limit(1)).length > 0;
+  const sameMail = (providerId: AnyPgColumn, messageId: AnyPgColumn) => or(eq(providerId, email.providerId), email.messageId ? eq(messageId, email.messageId) : undefined);
+  const messages = await tx.select({ id: message.id }).from(message).where(sameMail(message.providerId, message.emailMessageId)).orderBy(asc(message.id)).limit(1);
+  if (messages.length > 0) return true;
+  return (await tx.select({ id: screenedMail.id }).from(screenedMail).where(sameMail(screenedMail.providerId, screenedMail.emailMessageId)).limit(1)).length > 0;
 }
 
 /** Two copies arriving together both pass the check above; the unique indexes stop the second. */
@@ -79,7 +72,7 @@ const isDuplicate = (error: unknown) => {
   return code === "23505" || cause?.code === "23505";
 };
 
-export type MailOutcome = "continued" | "opened" | "noted" | "duplicate" | "ignored";
+export type MailOutcome = "continued" | "opened" | "noted" | "screened" | "duplicate" | "ignored";
 
 /** What a mail came to, and who to tell about it. Only a person writing tells anyone: a machine's mail never does. */
 interface Recorded {
@@ -87,23 +80,22 @@ interface Recorded {
   notice?: TeamNotice;
 }
 
-async function recordInTransaction(tx: Database, email: InboundEmail, services: Services): Promise<Recorded> {
-  const now = services.now();
-  // Nobody to answer: a mail with no address in its From line can't be anyone's request.
-  if (!parseAddress(email.from)) return { outcome: "ignored" };
-  if (await alreadyRecorded(tx, email)) return { outcome: "duplicate" };
-  // Our own mail coming back would answer itself for ever.
-  if (await isOwnAddress(tx, email.from, services.settings)) return { outcome: "ignored" };
-  const automated = isAutomatedMail(email.headers, email.from);
-  const found = await ticketOfMail(tx, email);
-  if (!found) {
-    if (automated) return { outcome: "ignored" };
-    const subject = oneLine(email.subject).slice(0, SUBJECT_MAX) || "(no subject)";
-    const productId = await productOfMail(tx, email);
-    const body = bodyOf(email.text, false);
-    const created = await openTicketIn(tx, { subject, body, requester: { email: email.from, name: email.fromName ?? undefined }, channel: "email", productId, mail: mailColumns(email) }, now);
-    return { outcome: "opened", notice: { kind: "new_ticket", ticket: created, writer: { contactId: created.contactId, email: email.from }, words: body } };
-  }
+const subjectOf = (email: InboundEmail) => oneLine(email.subject).slice(0, SUBJECT_MAX) || "(no subject)";
+
+/** Keeps the mail whole for a member to decide on. No contact is made, nobody is told, and nothing ever answers it, so it can't start a loop. */
+async function screen(tx: Database, email: InboundEmail, reason: ScreenReason, route: AddressRule | null, now: Date): Promise<Recorded> {
+  await tx.insert(screenedMail).values({ ...mailColumns(email), fromAddress: email.from, fromName: email.fromName, addressedTo: email.addressedTo, subject: subjectOf(email), body: bodyOf(email.text, false), reason, productId: route?.productId, receivedAt: email.receivedAt ?? now });
+  return { outcome: "screened" };
+}
+
+async function openFromMail(tx: Database, email: InboundEmail, productId: string, now: Date): Promise<Recorded> {
+  const body = bodyOf(email.text, false);
+  const created = await openTicketIn(tx, { subject: subjectOf(email), body, requester: { email: email.from, name: email.fromName ?? undefined }, channel: "email", productId, mail: mailColumns(email) }, now);
+  return { outcome: "opened", notice: { kind: "new_ticket", ticket: created, writer: { contactId: created.contactId, email: email.from }, words: body } };
+}
+
+/** A mail on a ticket that exists, from whatever address and however it looks: an answer must never be lost to a filter. */
+async function continueTicket(tx: Database, email: InboundEmail, found: typeof ticket.$inferSelect, automated: boolean, now: Date): Promise<Recorded> {
   if (automated) {
     // Kept for the team, with no effect on whose turn it is: an out-of-office isn't an answer.
     await tx.insert(message).values({ ...mailColumns(email), ticketId: found.id, kind: "system", body: `An automatic mail arrived from ${email.from}: ${oneLine(email.text).slice(0, 500)}`, fromAddress: email.from });
@@ -115,7 +107,24 @@ async function recordInTransaction(tx: Database, email: InboundEmail, services: 
   return { outcome: "continued", notice: { kind: "requester_answered", ticket: found, writer: { contactId: writer.id, email: email.from }, words: body } };
 }
 
-/** Records a mail someone sent to a support address. Whatever it says, it stays data: it can start or continue a ticket and nothing more. */
+async function recordInTransaction(tx: Database, email: InboundEmail, services: Services): Promise<Recorded> {
+  const now = services.now();
+  if (await alreadyRecorded(tx, email)) return { outcome: "duplicate" };
+  // The instance's own notices coming back, the one kind of mail not kept: it wrote them, and they quote strangers.
+  if (parseAddress(services.settings.SUCCURO_MAIL_FROM ?? "")?.address === email.from) return { outcome: "ignored" };
+  const rules = await addressRulesOf(tx);
+  const route = routeOf(email.addressedTo, rules);
+  // Nobody to answer, or our own address writing, which on a ticket would answer itself for ever.
+  if (!parseAddress(email.from)) return screen(tx, email, "no_sender", route, now);
+  if (rules.some(({ value }) => value === withoutPlus(email.from))) return screen(tx, email, "own_address", route, now);
+  const automated = isAutomatedMail(email.headers, email.from);
+  const found = await ticketOfMail(tx, email);
+  if (found) return continueTicket(tx, email, found, automated, now);
+  const decision = decideNewMail({ route, automated, flaggedByService: flaggedByMailService(email.headers), forged: senderLooksForged(email.authentication) });
+  return decision.opens ? openFromMail(tx, email, decision.productId, now) : screen(tx, email, decision.reason, route, now);
+}
+
+/** Records a mail that reached the service. Whatever it says, it stays data: it can start or continue a ticket, or wait for a member, and nothing more. */
 export async function recordInboundMail(services: Services, workspaceId: string, email: InboundEmail): Promise<MailOutcome> {
   try {
     const { outcome, notice } = await withWorkspace(services.db, workspaceId, (tx) => recordInTransaction(tx, email, services));

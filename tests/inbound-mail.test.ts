@@ -39,13 +39,23 @@ describe("a mail that matches nothing", () => {
     expect(first).toMatchObject({ kind: "customer", body: "Help", providerId: email.providerId, emailMessageId: email.messageId });
   });
 
-  it("files it by address among several products, and with no product when none matches", async () => {
-    const { workspaceId, userId, services } = await desk();
+  it("files it by address among several products", async () => {
+    const { workspaceId, userId, services, product } = await desk();
     const other = await addProduct(db, workspaceId, userId, "Other", "help@other.example");
     await recordInboundMail(services, workspaceId, inboundEmail({ addressedTo: ["help@other.example"] }));
-    await recordInboundMail(services, workspaceId, inboundEmail({ addressedTo: ["nobody@elsewhere.example"] }));
+    await recordInboundMail(services, workspaceId, inboundEmail({ addressedTo: ["support@acme.example"] }));
     expect((await ticketRow(workspaceId, 1)).productId).toBe(other.id);
-    expect((await ticketRow(workspaceId, 2)).productId).toBeNull();
+    expect((await ticketRow(workspaceId, 2)).productId).toBe(product.id);
+  });
+
+  it.each([
+    ["among other recipients", ["somebody@elsewhere.example", "support@acme.example"]],
+    ["in capitals", ["SUPPORT@Acme.Example"]],
+    ["with a plus part", ["support+billing@acme.example"]],
+  ])("finds its product's address %s", async (_, addressedTo) => {
+    const { workspaceId, services, product } = await desk();
+    expect(await recordInboundMail(services, workspaceId, inboundEmail({ addressedTo }))).toBe("opened");
+    expect((await ticketRow(workspaceId, 1)).productId).toBe(product.id);
   });
 
   it("gives a mail with no subject or text words to show", async () => {
@@ -164,17 +174,19 @@ describe("a mail that continues a ticket", () => {
 
   it("flags a sender whose mail fails its own checks, and still keeps the words", async () => {
     const { workspaceId, services } = await desk();
-    await recordInboundMail(services, workspaceId, inboundEmail({ authentication: { dmarc: "fail" } }));
-    expect((await messagesOf(workspaceId, 1))[0].senderSuspect).toBe(true);
+    const first = inboundEmail();
+    await recordInboundMail(services, workspaceId, first);
+    await recordInboundMail(services, workspaceId, inboundEmail({ inReplyTo: first.messageId, authentication: { dmarc: "fail" } }));
+    expect((await messagesOf(workspaceId, 1)).at(-1)?.senderSuspect).toBe(true);
   });
 });
 
 describe("what isn't a person writing", () => {
   it("doesn't open a ticket, or answer itself", async () => {
     const { workspaceId, services } = await desk();
-    expect(await recordInboundMail(services, workspaceId, inboundEmail({ from: "no address here" }))).toBe("ignored");
-    expect(await recordInboundMail(services, workspaceId, inboundEmail({ headers: { "auto-submitted": "auto-replied" } }))).toBe("ignored");
-    expect(await recordInboundMail(services, workspaceId, inboundEmail({ from: "support@acme.example" }))).toBe("ignored");
+    expect(await recordInboundMail(services, workspaceId, inboundEmail({ from: "no address here" }))).toBe("screened");
+    expect(await recordInboundMail(services, workspaceId, inboundEmail({ headers: { "auto-submitted": "auto-replied" } }))).toBe("screened");
+    expect(await recordInboundMail(services, workspaceId, inboundEmail({ from: "support@acme.example" }))).toBe("screened");
     expect(await allTickets(workspaceId)).toEqual([]);
   });
 
@@ -220,9 +232,9 @@ describe("the hook's address", () => {
   const RECEIVED = JSON.stringify({ type: "email.received", data: { email_id: "mail-1", from: "ada@customer.example", to: ["support@acme.example"] } });
   const FETCHES_MAIL = { match: "GET https://api.resend.com/emails/receiving/mail-1", json: { id: "mail-1", from: "ada@customer.example", to: ["support@acme.example"], subject: "From the hook", text: "Hello", headers: {}, message_id: "<hook@customer.example>" } };
 
-  async function connected() {
+  async function connected(fetchesMail = FETCHES_MAIL) {
     const { workspaceId, userId } = await createTestWorkspace(db);
-    const { services, calls } = testServices(db, [RESEND_DOMAINS, RESEND_SENDS, FETCHES_MAIL]);
+    const { services, calls } = testServices(db, [RESEND_DOMAINS, RESEND_SENDS, fetchesMail]);
     await addProduct(db, workspaceId, userId);
     const made = await connectResend(services, workspaceId, userId);
     const [row] = await withWorkspace(db, workspaceId, (tx) => tx.select().from(connection).where(eq(connection.id, made.id)));
@@ -249,6 +261,13 @@ describe("the hook's address", () => {
     const answer = await receiveHook(services, id, token, forged);
     expect(answer.status).toBe(401);
     expect(calls).toHaveLength(before);
+    expect(await allTickets(workspaceId)).toEqual([]);
+  });
+
+  it("answers an ordinary success to a mail it screens, so the service doesn't send it again", async () => {
+    const elsewhere = { ...FETCHES_MAIL, json: { ...FETCHES_MAIL.json, to: ["sales@another-domain.example"] } };
+    const { workspaceId, services, id, token } = await connected(elsewhere);
+    expect(await receiveHook(services, id, token, signedRequest(RECEIVED))).toEqual({ status: 200, body: "screened" });
     expect(await allTickets(workspaceId)).toEqual([]);
   });
 

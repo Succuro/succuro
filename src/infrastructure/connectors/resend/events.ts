@@ -30,6 +30,7 @@ export interface ReceivedEmail {
   html?: string | null;
   headers?: Record<string, unknown>;
   message_id?: string;
+  created_at?: string;
   authentication?: MailAuthentication;
   attachments?: { filename?: string; content_type?: string; size?: number }[];
 }
@@ -65,6 +66,12 @@ const lowercased = (headers: Record<string, unknown> = {}) => Object.fromEntries
 const attachmentsOf = (email: ReceivedEmail): NotedAttachment[] =>
   (email.attachments ?? []).map((attachment) => ({ filename: attachment.filename ?? "unnamed", contentType: attachment.content_type ?? "unknown", size: attachment.size ?? null }));
 
+/** The service's date, left out when it can't be read: the time it reached this app is close enough then. */
+function receivedAtOf({ created_at: at }: ReceivedEmail): { receivedAt?: Date } {
+  const date = at ? new Date(at) : null;
+  return date && !Number.isNaN(date.getTime()) ? { receivedAt: date } : {};
+}
+
 export function inboundEmailOf(email: ReceivedEmail): InboundEmail {
   const headers = lowercased(email.headers);
   const sender = parseAddress(headers.from ?? "") ?? parseAddress(email.from);
@@ -81,5 +88,6 @@ export function inboundEmailOf(email: ReceivedEmail): InboundEmail {
     headers,
     authentication: email.authentication ?? {},
     attachments: attachmentsOf(email),
+    ...receivedAtOf(email),
   };
 }

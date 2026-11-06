@@ -122,6 +122,13 @@ describe("reading a webhook", () => {
     });
   });
 
+  it("reads when the service received a mail, and leaves it out when it can't be read", async () => {
+    const read = (created_at?: string) => inboundEmailOf({ id: "mail-1", from: "ada@customer.example", created_at }).receivedAt;
+    expect(read("2026-10-15T18:41:46.119Z")).toEqual(new Date("2026-10-15T18:41:46.119Z"));
+    expect(read("not a date")).toBeUndefined();
+    expect(read()).toBeUndefined();
+  });
+
   it("makes the service send it again when the mail can't be fetched", async () => {
     const { adapter } = client([{ match: "GET https://api.resend.com/emails/receiving/mail-1", status: 500, json: { message: "Down" } }]);
     await expect(adapter.readWebhook?.(signedRequest(RECEIVED))).rejects.toMatchObject({ status: 500 });

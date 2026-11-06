@@ -23,6 +23,8 @@ export const product = pgTable(
     colour: text().notNull().default("#6b7a90"),
     /** Where its mail is received and sent from; empty until a member sets it, and nothing can be emailed then. */
     supportAddress: text(),
+    /** New mail on the support address waits in Screened with this product already chosen, rather than opening a ticket. */
+    screensSupportAddress: boolean().notNull().default(false),
     senderName: text(),
     /** Public by design: it sits in the widget's snippet on a website, and only ever opens tickets. */
     publicKey: text().notNull().unique(),
@@ -30,6 +32,28 @@ export const product = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [unique().on(table.workspaceId, table.slug), tenantIsolation()],
+).enableRLS();
+
+/**
+ * Where else a product receives, beyond the support address its replies leave from: one address, or a
+ * domain for every address on it. A value belongs to one product, so a mail can't mean two of them.
+ */
+export const productAddress = pgTable(
+  "product_address",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    workspaceId: ownedByWorkspace(),
+    productId: uuid()
+      .notNull()
+      .references(() => product.id, { onDelete: "cascade" }),
+    /** Lowercased: `help@acme.example`, or `acme.example` for every address there. */
+    value: text().notNull(),
+    /** New mail here waits in Screened with this product already chosen, rather than opening a ticket. */
+    screens: boolean().notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [unique().on(table.workspaceId, table.value), index().on(table.productId), tenantIsolation()],
 ).enableRLS();
 
 /** Someone who writes in: one per address in a workspace. */
@@ -177,6 +201,52 @@ export const message = pgTable(
     uniqueIndex().on(table.workspaceId, table.providerId).where(sql`provider_id is not null`),
     uniqueIndex().on(table.workspaceId, table.emailMessageId).where(sql`email_message_id is not null`),
     index().on(table.deliveryState).where(sql`delivery_state = 'sending'`),
+    tenantIsolation(),
+  ],
+).enableRLS();
+
+export const screenReason = pgEnum("screen_reason", ["no_product", "address_rule", "machine", "service_flag", "forged", "own_address", "no_sender"]);
+export const screenedState = pgEnum("screened_state", ["waiting", "promoted", "dismissed"]);
+
+/**
+ * A new mail that didn't open a ticket, kept whole until a member decides. Nothing here has touched
+ * the desk: no contact was made for it, nobody was told, and it's never answered. A decision is
+ * recorded rather than the row removed, so the same mail posted again stays known.
+ */
+export const screenedMail = pgTable(
+  "screened_mail",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    workspaceId: ownedByWorkspace(),
+    providerId: text().notNull(),
+    emailMessageId: text(),
+    emailInReplyTo: text(),
+    emailReferences: text().array().notNull().default(sql`'{}'::text[]`),
+    /** As the mail gave it, which may be no address at all. */
+    fromAddress: text().notNull(),
+    fromName: text(),
+    addressedTo: text().array().notNull().default(sql`'{}'::text[]`),
+    subject: text().notNull(),
+    body: text().notNull(),
+    senderSuspect: boolean().notNull().default(false),
+    attachments: jsonb().$type<NotedAttachment[]>().notNull().default([]),
+    reason: screenReason().notNull(),
+    /** The product its address points to, already chosen when a member opens a ticket from it. */
+    productId: uuid().references(() => product.id, { onDelete: "set null" }),
+    state: screenedState().notNull().default("waiting"),
+    /** The ticket it became, once promoted. */
+    ticketId: uuid().references(() => ticket.id, { onDelete: "set null" }),
+    decidedBy: text().references(() => user.id, { onDelete: "set null" }),
+    decidedAt: timestamp({ withTimezone: true }),
+    /** When the mail service received it. */
+    receivedAt: timestamp({ withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    uniqueIndex().on(table.workspaceId, table.providerId),
+    uniqueIndex().on(table.workspaceId, table.emailMessageId).where(sql`email_message_id is not null`),
+    index().on(table.workspaceId, table.state, table.receivedAt),
     tenantIsolation(),
   ],
 ).enableRLS();

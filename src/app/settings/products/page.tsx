@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { productAddressesOf, type ProductAddress } from "@/application/product-addresses";
 import { productsOf, type Product } from "@/application/products";
 import { Loading, PageHeading, Shell } from "@/components/shell";
 import { SettingsNav } from "@/components/settings-nav";
@@ -10,6 +11,7 @@ import { currentSeat } from "@/infrastructure/auth/session";
 import { db } from "@/infrastructure/db/client";
 import { env } from "@/infrastructure/env";
 import { createProductAction, deleteProductAction, renewKeyAction, updateProductAction } from "./actions";
+import { ProductAddresses } from "./addresses";
 
 export const metadata: Metadata = { title: "Products" };
 
@@ -25,6 +27,10 @@ function ProductFields({ product }: { product?: Product }) {
       <Labelled label="Support address" hint="Where its mail arrives and replies leave from. Its domain must be verified in your mail service.">
         <input name="supportAddress" type="email" defaultValue={product?.supportAddress ?? ""} placeholder="support@acme.example" className={FIELD} />
       </Labelled>
+      <label className="flex items-start gap-2 text-sm sm:order-last sm:col-span-2">
+        <input type="checkbox" name="screensSupportAddress" defaultChecked={product?.screensSupportAddress ?? false} className="mt-1" />
+        <span>Screen first: new mail on the support address waits in Screened with this product already chosen, rather than opening a ticket. Answers to tickets always get through.</span>
+      </label>
       <Labelled label="Sender name" hint="How replies are signed. The product’s name when left empty.">
         <input name="senderName" maxLength={80} defaultValue={product?.senderName ?? ""} placeholder="Acme support" className={FIELD} />
       </Labelled>
@@ -37,7 +43,7 @@ const snippetOf = (product: Product, origin: string) => `<script src="${new URL(
 
 const formUrl = (origin: string) => new URL("/api/public/tickets", origin).toString();
 
-function ProductCard({ product, origin, mayChange }: { product: Product; origin: string; mayChange: boolean }) {
+function ProductCard({ product, addresses, origin, mayChange }: { product: Product; addresses: ProductAddress[]; origin: string; mayChange: boolean }) {
   const snippet = snippetOf(product, origin);
   return (
     <Card>
@@ -54,6 +60,7 @@ function ProductCard({ product, origin, mayChange }: { product: Product; origin:
           </ActionForm>
         </div>
       )}
+      <ProductAddresses productId={product.id} addresses={addresses} mayChange={mayChange} />
       <div className="mt-5 border-t pt-5">
         <h3 className="text-sm font-medium">Widget</h3>
         <p className="mt-1 text-sm text-muted-foreground">Paste this before the end of a page’s body. Its key is public: it can only open tickets, and each visitor’s requests are limited.</p>
@@ -75,13 +82,13 @@ function ProductCard({ product, origin, mayChange }: { product: Product; origin:
 
 async function Content() {
   const seat = await currentSeat();
-  const products = await productsOf(db(), seat.workspaceId);
+  const [products, addresses] = await Promise.all([productsOf(db(), seat.workspaceId), productAddressesOf(db(), seat.workspaceId)]);
   const mayChange = managesSettings(seat.role);
   const origin = env().BETTER_AUTH_URL;
   return (
     <div className="max-w-3xl space-y-4">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} origin={origin} mayChange={mayChange} />
+        <ProductCard key={product.id} product={product} addresses={addresses.filter(({ productId }) => productId === product.id)} origin={origin} mayChange={mayChange} />
       ))}
       {products.length === 0 && <p className="text-sm text-muted-foreground">No product yet. Add the first one: its tickets, address and widget all start here.</p>}
       {mayChange ? (
@@ -102,7 +109,7 @@ async function Content() {
 export default function ProductsPage() {
   return (
     <Shell>
-      <PageHeading title="Products">Each with its own address, sender name and widget, all in one inbox.</PageHeading>
+      <PageHeading title="Products">Each with its own addresses, sender name and widget, all in one inbox.</PageHeading>
       <SettingsNav />
       <Suspense fallback={<Loading />}>
         <Content />

@@ -39,6 +39,8 @@ export interface TicketToOpen {
   /** Who recorded it on the requester's behalf, when they didn't write it themselves. */
   recordedBy?: { userId: string; writtenBy: "member" | "assistant" };
   mail?: FirstMailDetails;
+  /** When it really came in, for a mail a member opens later: the ticket and its first message are dated then. */
+  receivedAt?: Date;
 }
 
 /** Opens a ticket with its first message, in the caller's workspace transaction. */
@@ -61,10 +63,11 @@ export async function openTicketIn(tx: Database, input: TicketToOpen, now: Date)
       aboutUrl: input.about?.url ?? null,
       context: input.context ?? null,
       replyToken: replyTokenFrom(randomBytes(REPLY_TOKEN_BYTES)),
-      lastMessageAt: now,
+      lastMessageAt: input.receivedAt ?? now,
+      createdAt: input.receivedAt,
     })
     .returning();
-  await tx.insert(message).values({ ...input.mail, ticketId: created.id, kind: "customer", body: input.body, authorContactId: requester.id, authorUserId: input.recordedBy?.userId ?? null, writtenBy: input.recordedBy?.writtenBy ?? null });
+  await tx.insert(message).values({ ...input.mail, createdAt: input.receivedAt, ticketId: created.id, kind: "customer", body: input.body, authorContactId: requester.id, authorUserId: input.recordedBy?.userId ?? null, writtenBy: input.recordedBy?.writtenBy ?? null });
   return created;
 }
 

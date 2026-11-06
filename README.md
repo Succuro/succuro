@@ -7,7 +7,7 @@ One support desk for all of a company's products, usable from screens and from a
 ## What works today
 
 - **Several companies, several products.** Workspaces kept apart by Postgres row-level security, and products inside a workspace, each with its own address, sender name and widget.
-- **Tickets in**: `POST /api/v1/tickets` with an API key (limited per key), a public form endpoint and an embeddable widget (rate limited, with a honeypot), and inbound email through Resend's signed webhook, matched to tickets by a token in the reply address and by `In-Reply-To`/`References`.
+- **Tickets in**: `POST /api/v1/tickets` with an API key (limited per key), a public form endpoint and an embeddable widget (rate limited, with a honeypot), and inbound email through Resend's signed webhook, matched to tickets by a token in the reply address and by `In-Reply-To`/`References`. A new mail opens a ticket only if it was sent to one of a product's addresses or domains; anything else waits in Screened, where a member opens a ticket from it or dismisses it.
 - **Replies out**: by email from the product's address through the workspace's own Resend connection, threaded, with delivery recorded and failures shown plainly. Each mail carries a link to a page where the requester reads and answers without an account.
 - **Telling the team**: a mail to the assignee, or to everyone, when a ticket arrives or a requester answers, capped against bursts, with an off switch per member and per product.
 - **Screens**: an inbox with filters, counts and bulk actions; a ticket page with the conversation, reply box, notes, saved replies and everything known about the request; settings for products, categories, saved replies, connections, keys and who may send.

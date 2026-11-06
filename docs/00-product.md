@@ -6,7 +6,7 @@
 
 A company with several products shouldn't need a support tool per product, and a small team shouldn't need one that charges per seat. Succuro keeps every product's requests in one inbox, and answers from each product's own address.
 
-1. **Workspaces and products.** A workspace is a company. A product is a brand or project inside it, with a name, a colour, a support address, a sender name and a public key for its widget.
+1. **Workspaces and products.** A workspace is a company. A product is a brand or project inside it, with a name, a colour, a support address, other addresses or domains it receives on, a sender name and a public key for its widget.
 2. **Tickets.** Each has a number counted per workspace, a subject, a status, a priority, a category, a product, a requester, an assignee, tags and a channel (email, web, API or assistant). An app can say what it's about (type, id, title, address) and add free context (page, version, operating system).
 3. **Statuses.** Open waits on support. Pending waits on the requester. Resolved and closed have settled. Anything the requester writes puts a ticket back to open, a closed one included. A reply that leaves makes it pending, unless the member settled it as they sent it.
 4. **Messages.** A conversation holds the requester's words, replies, internal notes and system lines. Each says who wrote it, a member or an assistant; a reply also says what became of it.
@@ -36,15 +36,25 @@ Only `subject`, `message` and `requester.email` are required. `product` is a pro
 
 **A website.** A product's settings give a snippet that loads `/widget.js`, a small form in a shadow root. It carries the product's name, colour and public key in its attributes, so a page view asks the database nothing. A page can add context with `window.supportWidgetContext = { version: "1.2" }`. Or post your own form to `POST /api/public/tickets`, as JSON or as form fields, with `key`, `email`, `subject`, `message` and optionally `name`, `about` and `context`. Any site may post there. A hidden `website` field is the honeypot: filled in, the answer is an ordinary success and nothing is recorded. It's limited to 5 tickets an hour from one address on one product, and 200 an hour on one product from everywhere. Nothing is mailed at this point: an open form that sends mail to whatever address it's given could be used against anyone.
 
-**Email.** Mail to a product's address reaches Resend, whose `email.received` webhook posts here, signed. A webhook carries only a mail's metadata, so the body is then fetched with the workspace's own key. It continues a ticket if the address it was sent to holds that ticket's token, or if its `In-Reply-To` or `References` name a mail already on one, in that order, inside that workspace only. Anything else opens a new ticket. Then:
+**Email.** Mail to a product's address reaches Resend, whose `email.received` webhook posts here, signed. A webhook carries only a mail's metadata, so the body is then fetched with the workspace's own key. It continues a ticket if the address it was sent to holds that ticket's token, or if its `In-Reply-To` or `References` name a mail already on one, in that order, inside that workspace only. Anything else is a new mail. It opens a ticket if it was sent, in `To`, in `Cc` or as the address it was delivered for, with or without a plus part, to a product's support address or to another address or domain that product holds; an address counts before a domain, and a workspace with one product is no exception. Any other new mail waits in Screened, below. Then:
 
 - The same mail posted twice is recorded once, by the service's id and by its Message-ID.
 - What the mail client quoted back is dropped, by the usual forms; when in doubt, everything stays.
-- A machine's mail opens nothing, reopens nothing, tells nobody and is never answered. That covers `Auto-Submitted`, `Precedence: bulk`, `junk`, `list` or `auto_reply`, the usual autoresponder headers, `List-Id`, `X-Failed-Recipients`, an empty `Return-Path`, a delivery report, and senders like `mailer-daemon@` or `postmaster@`. On a ticket it answers, it's noted for the team. Nothing here ever mails a requester on its own, so a robot that doesn't say what it is still gets nothing back to answer.
-- A product's own address writing in is ignored, and so is the instance's own (`SUCCURO_MAIL_FROM`).
+- A machine's mail opens nothing, reopens nothing, tells nobody and is never answered. That covers `Auto-Submitted`, `Precedence: bulk`, `junk`, `list` or `auto_reply`, the usual autoresponder headers, `List-Id`, `X-Failed-Recipients`, an empty `Return-Path`, a delivery report, and senders like `mailer-daemon@` or `postmaster@`. New, it waits in Screened; on a ticket it answers, it's noted for the team. Nothing here ever mails a requester on its own, so a robot that doesn't say what it is still gets nothing back to answer.
+- A product's own address writing in waits in Screened and never continues a ticket, which would answer itself for ever. The instance's own address (`SUCCURO_MAIL_FROM`) is ignored: the only mail not kept, since this app wrote it.
 - Someone else writing on a ticket, a colleague by mail for example, is shown to the team with their address, and not to the requester.
 - A mail whose own checks fail (DMARC, or both SPF and DKIM) is flagged: its From line may be anyone.
 - An attachment isn't kept yet, but it is recorded: the team and the requester both see that it arrived and wasn't stored.
+
+**Screened.** A mail service's webhook posts everything its account receives, whatever the domain, so a new mail that shouldn't open a ticket is kept whole in a list of its own: sender, addresses, subject, body (cut at the length a message holds), date, mail ids and what its attachments were. That covers:
+
+- mail sent to no product's address, or to an address or domain set to screen first, a support address included, which keeps its product already chosen;
+- a machine's mail, by the rules above;
+- mail whose own checks fail, DMARC or both SPF and DKIM;
+- mail the service itself failed in `X-SES-Spam-Verdict` or `X-SES-Virus-Verdict`, on the routes that add those: not all do, and most spam passes them, so this is a small help and not a spam filter;
+- a product's own address writing in, and mail with no sender address.
+
+No contact is made, nobody is told and nothing answers it. The hook answers `200` with `screened`, so the service doesn't send it again, and the same mail posted twice is kept once. The inbox shows how many wait. A member opens a ticket from one, choosing the product: the ticket is dated when the mail arrived, carries its mail ids so an answer to it finds the ticket, and tells the team like any new ticket, while the sender hears nothing. Or a member dismisses it, one by one or in bulk: it stays in its own tab and can still become a ticket. An answer to an existing ticket never comes here, whichever address it arrives on. Nothing is purged yet: this mail stays until the workspace is deleted.
 
 ## 3. Ways out
 
@@ -151,4 +161,4 @@ None of this exists yet:
 - Attachments, kept and sent.
 - Live chat.
 
-Also missing today, and worth knowing: there's no spam filtering beyond what the mail service does and the limits on the form and the API, and mail from one address that doesn't say it's a machine opens a ticket each time; and there's no screen listing the assistants a member has approved, so one is ended by disconnecting it on the assistant's side.
+Also missing today, and worth knowing: there's no spam filter of its own beyond Screened's checks and the limits on the form and the API, so spam that passes them on an address that opens tickets still opens one; no assistant tool reads Screened yet; mail from one address that doesn't say it's a machine opens a ticket each time; and there's no screen listing the assistants a member has approved, so one is ended by disconnecting it on the assistant's side.

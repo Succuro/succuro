@@ -31,6 +31,7 @@ function Webhook({ connection, connector, mayChange }: { connection: ConnectionV
         {connector.name} posts {connector.webhooks} to this address:
       </p>
       <Code>{connection.hookUrl}</Code>
+      <p className="text-sm text-muted-foreground">A new mail opens a ticket only if it was sent to one of your products’ addresses. Any other waits in Screened, where you can open a ticket from it or dismiss it. An answer to a ticket always gets through.</p>
       {connection.signingSecretSaved ? <p className="text-sm text-calm">Its signing secret is saved.</p> : <p className="text-sm text-alert">No signing secret yet: nothing posted to this address is believed until you paste it.</p>}
       {mayChange && (
         <ActionForm action={saveSigningSecretAction.bind(null, connector.kind, connection.id)} submit={connection.signingSecretSaved ? "Replace the signing secret" : "Save the signing secret"} busy="…" quiet>

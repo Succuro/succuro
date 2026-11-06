@@ -55,6 +55,8 @@ export interface InboundEmail {
   headers: Record<string, string>;
   authentication: MailAuthentication;
   attachments: NotedAttachment[];
+  /** When the service received it, if it says. */
+  receivedAt?: Date;
 }
 
 export type DeliveryOutcome = "sent" | "delivered" | "delayed" | "bounced" | "complained" | "failed";

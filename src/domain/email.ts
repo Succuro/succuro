@@ -86,6 +86,14 @@ export function isAutomatedMail(headers: Readonly<Record<string, string>>, from:
   return DELIVERY_ROBOT.test(from);
 }
 
+const SERVICE_VERDICTS = ["x-ses-spam-verdict", "x-ses-virus-verdict"];
+
+/**
+ * The receiving service's own verdict, on the routes that add one; most routes add none, so its
+ * absence says nothing. A sender could write these headers, but only to its own harm: only a failure counts.
+ */
+export const flaggedByMailService = (headers: Readonly<Record<string, string>>) => SERVICE_VERDICTS.some((name) => headers[name]?.trim().toLowerCase() === "fail");
+
 export interface MailAuthentication {
   spf?: string;
   dkim?: string;

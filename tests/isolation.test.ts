@@ -4,6 +4,8 @@ import { createApiKey } from "@/application/api-keys";
 import { addCategory } from "@/application/categories";
 import { addNote } from "@/application/conversation";
 import { saveNoticePreference } from "@/application/notifications";
+import { recordInboundMail } from "@/application/inbound-mail";
+import { addProductAddress } from "@/application/product-addresses";
 import { receivePublicForm } from "@/application/public-form";
 import { addSavedReply } from "@/application/saved-replies";
 import { setAssistantMaySend } from "@/application/workspace-settings";
@@ -11,7 +13,7 @@ import { inviteToWorkspace } from "@/application/invitations";
 import type { Database } from "@/infrastructure/db/client";
 import { withWorkspace } from "@/infrastructure/db/tenant";
 import { createTestDatabase, createTestWorkspace } from "./support/database";
-import { addProduct, connectResend, openTicket, testServices } from "./support/desk";
+import { addProduct, connectResend, inboundEmail, openTicket, testServices } from "./support/desk";
 
 /**
  * Isolation is checked against the database itself, not a list kept by hand: a new table that isn't
@@ -44,6 +46,8 @@ async function stock(workspaceId: string, userId: string) {
   await saveNoticePreference(db, workspaceId, userId, true, []);
   await receivePublicForm(services, { key: product.publicKey, email: "bea@customer.example", subject: "From the form", message: "Hello" }, "203.0.113.1");
   await inviteToWorkspace(services, workspaceId, userId, "new@customer.example", "member");
+  await addProductAddress(db, workspaceId, userId, product.id, "site.example", true);
+  await recordInboundMail(services, workspaceId, inboundEmail({ addressedTo: ["nobody@elsewhere.example"] }));
 }
 
 beforeAll(async () => {
@@ -58,7 +62,7 @@ beforeAll(async () => {
 
 describe("every table that belongs to a workspace", () => {
   it("is found: this file can't pass by looking at nothing", () => {
-    expect(tables).toEqual(expect.arrayContaining(["api_key", "category", "connection", "contact", "invitation", "message", "notification_preference", "product", "request_count", "saved_reply", "ticket", "ticket_counter", "workspace_settings"]));
+    expect(tables).toEqual(expect.arrayContaining(["product_address", "screened_mail", "api_key", "category", "connection", "contact", "invitation", "message", "notification_preference", "product", "request_count", "saved_reply", "ticket", "ticket_counter", "workspace_settings"]));
   });
 
   it("has row-level security on, and the tenant policy", async () => {

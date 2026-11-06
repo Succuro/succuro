@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { categoriesOf } from "@/application/categories";
 import { productsOf } from "@/application/products";
 import { teamOf } from "@/application/team";
+import { screenedWaitingCount } from "@/application/screened-mail";
 import { listTickets, tagsInUse, type InboxTicket } from "@/application/ticket-queries";
 import { Loading, Shell } from "@/components/shell";
 import { ActionForm } from "@/components/try-button";
@@ -141,7 +142,7 @@ async function Inbox({ searchParams }: Pick<PageProps<"/tickets">, "searchParams
   const query = await searchParams;
   const seat = await currentSeat();
   const page = pageOf(query);
-  const [{ tickets, counts, hasMore }, products, categories, people, tags] = await Promise.all([listTickets(db(), seat.workspaceId, filtersOf(query, seat.userId), page), productsOf(db(), seat.workspaceId), categoriesOf(db(), seat.workspaceId), teamOf(db(), seat.workspaceId), tagsInUse(db(), seat.workspaceId)]);
+  const [waitingInScreened, { tickets, counts, hasMore }, products, categories, people, tags] = await Promise.all([screenedWaitingCount(db(), seat.workspaceId), listTickets(db(), seat.workspaceId, filtersOf(query, seat.userId), page), productsOf(db(), seat.workspaceId), categoriesOf(db(), seat.workspaceId), teamOf(db(), seat.workspaceId), tagsInUse(db(), seat.workspaceId)]);
   const team = people.map(({ userId, name }) => ({ id: userId, name }));
   const nameOf = (userId: string | null) => people.find((person) => person.userId === userId)?.name;
   const anyTicket = Object.values(counts).some((count) => count > 0) || tags.length > 0;
@@ -150,6 +151,11 @@ async function Inbox({ searchParams }: Pick<PageProps<"/tickets">, "searchParams
       <div className="flex flex-wrap items-center justify-between gap-3">
         <StatusTabs query={query} counts={counts} />
         <div className="flex items-center gap-3 text-sm">
+          {waitingInScreened > 0 && (
+            <Link href="/tickets/screened" title="Mail that didn’t open a ticket, waiting for your decision" className="text-muted-foreground hover:text-foreground">
+              Screened <span className="font-mono text-xs">{waitingInScreened}</span>
+            </Link>
+          )}
           <Link href={inboxHref(query, { assignee: "me", page: undefined })} className="text-muted-foreground hover:text-foreground">
             Mine
           </Link>

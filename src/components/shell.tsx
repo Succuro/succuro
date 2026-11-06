@@ -9,6 +9,7 @@ import { WorkspaceMenu } from "./workspace-menu";
 
 const NAV = [
   { href: "/tickets", label: "Inbox" },
+  { href: "/tickets/screened", label: "Screened" },
   { href: "/settings", label: "Settings" },
 ];
 

@@ -14,6 +14,7 @@ const productInput = z.object({
   colour: z.string().regex(/^#[0-9a-fA-F]{6}$/, "pick a colour like #6b7a90").optional(),
   // The address replies leave from: its domain must be verified in the mail service.
   supportAddress: z.union([z.literal("").transform(() => null), emailAddress]).optional(),
+  screensSupportAddress: z.boolean().optional(),
   senderName: z
     .string()
     .transform(oneLine)
@@ -36,12 +37,12 @@ export const productsOf = (db: Database, workspaceId: string) => withWorkspace(d
 export type Product = Awaited<ReturnType<typeof productsOf>>[number];
 
 /** A product's address and sender name are what leaves in the company's name: an owner or an admin decides them. */
-async function refused(db: Database, workspaceId: string, actorId: string): Promise<string | null> {
+export async function refusedProductChange(db: Database, workspaceId: string, actorId: string): Promise<string | null> {
   return managesSettings(await roleIn(db, workspaceId, actorId)) ? null : NOT_A_MANAGER_OF_SETTINGS;
 }
 
 export async function createProduct(db: Database, workspaceId: string, actorId: string, values: ProductInput): Promise<Tried> {
-  const refusal = await refused(db, workspaceId, actorId);
+  const refusal = await refusedProductChange(db, workspaceId, actorId);
   if (refusal) return { ok: false, error: refusal };
   const parsed = productInput.safeParse(values);
   if (!parsed.success) return { ok: false, error: firstProblem(parsed.error) };
@@ -55,7 +56,7 @@ export async function createProduct(db: Database, workspaceId: string, actorId: 
 
 /** Its slug stays when it's renamed: apps name a product by it. */
 export async function updateProduct(db: Database, workspaceId: string, actorId: string, id: string, values: ProductInput): Promise<Tried> {
-  const refusal = await refused(db, workspaceId, actorId);
+  const refusal = await refusedProductChange(db, workspaceId, actorId);
   if (refusal) return { ok: false, error: refusal };
   const parsed = productInput.safeParse(values);
   if (!parsed.success) return { ok: false, error: firstProblem(parsed.error) };
@@ -65,13 +66,13 @@ export async function updateProduct(db: Database, workspaceId: string, actorId: 
 
 /** Its tickets stay, without a product; a widget still using its key stops opening any. */
 export async function deleteProduct(db: Database, workspaceId: string, actorId: string, id: string): Promise<boolean> {
-  if (await refused(db, workspaceId, actorId)) return false;
+  if (await refusedProductChange(db, workspaceId, actorId)) return false;
   return (await withWorkspace(db, workspaceId, (tx) => tx.delete(product).where(eq(product.id, id)).returning({ id: product.id }))).length > 0;
 }
 
 /** A leaked or abused public key is replaced, and the old snippet stops working. */
 export async function renewPublicKey(db: Database, workspaceId: string, actorId: string, id: string): Promise<boolean> {
-  if (await refused(db, workspaceId, actorId)) return false;
+  if (await refusedProductChange(db, workspaceId, actorId)) return false;
   const changed = await withWorkspace(db, workspaceId, (tx) => tx.update(product).set({ publicKey: `pk_${randomToken(24)}` }).where(and(eq(product.id, id), ne(product.publicKey, ""))).returning({ id: product.id }));
   return changed.length > 0;
 }

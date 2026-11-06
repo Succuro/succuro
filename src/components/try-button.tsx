@@ -38,11 +38,11 @@ export function ConfirmButton({ action, label, confirm }: { action: () => Promis
 }
 
 /** A form that says what came of it under its fields. Its fields come from the server; only the answer lives here. */
-export function ActionForm({ action, submit, busy, className = "flex flex-col gap-3", quiet = false, children }: { action: (previous: Tried | null, form: FormData) => Promise<Tried>; submit?: string; busy?: string; className?: string; quiet?: boolean; children: ReactNode }) {
+export function ActionForm({ id, action, submit, busy, className = "flex flex-col gap-3", quiet = false, children }: { id?: string; action: (previous: Tried | null, form: FormData) => Promise<Tried>; submit?: string; busy?: string; className?: string; quiet?: boolean; children: ReactNode }) {
   const [tried, run, pending] = useActionState<Tried | null, FormData>(action, null);
   const Button = quiet ? QuietButton : PrimaryButton;
   return (
-    <form action={run} className={className}>
+    <form id={id} action={run} className={className}>
       {children}
       {submit && (
         <div>

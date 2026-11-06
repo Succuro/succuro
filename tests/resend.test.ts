@@ -1,7 +1,8 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { resendAdapter } from "@/infrastructure/connectors/resend";
-import { inboundEmailOf, textOfHtml } from "@/infrastructure/connectors/resend/events";
+import { requestJson, bearerJson } from "@/infrastructure/connectors/http";
+import { deliveryEventOf, inboundEmailOf, textOfHtml } from "@/infrastructure/connectors/resend/events";
 import { signatureHolds } from "@/infrastructure/connectors/resend/signature";
 import { NOW, signedRequest, WEBHOOK_SECRET } from "./support/desk";
 import { fakeFetch, type FakeRoute } from "./support/fetch";
@@ -170,5 +171,36 @@ describe("a received mail's text", () => {
 
   it("falls back on the Message-ID header, and names an attachment that has no name", () => {
     expect(inboundEmailOf({ id: "1", from: "a@b.example", headers: { "Message-ID": "<h@x>" }, attachments: [{}] })).toMatchObject({ messageId: "<h@x>", attachments: [{ filename: "unnamed", contentType: "unknown", size: null }] });
+  });
+});
+
+describe("what a service says when it refuses", () => {
+  const KEY = "re_the_workspace_secret_key_1234";
+  const refusal = async (json: unknown, url = "https://api.resend.com/domains") => {
+    const { fetch } = fakeFetch([{ match: "GET https://api.resend.com", status: 401, json }]);
+    return (await requestJson(fetch, "Resend", url, { headers: bearerJson(KEY) }).catch((error: Error) => error)) as Error;
+  };
+
+  it("keeps the words that say what to fix", async () => {
+    expect((await refusal({ message: "This API key is restricted to only send emails" })).message).toBe("Resend refused the credentials: This API key is restricted to only send emails");
+  });
+
+  it("never repeats the key it was sent", async () => {
+    expect((await refusal({ message: `Invalid key ${KEY}` })).message).not.toContain(KEY);
+  });
+
+  it("never repeats a key in an address, what follows a name for one, or a long token", async () => {
+    const { message } = await refusal({ message: "Rejected https://api.resend.com/x?api_key=abc123secret token=def456secret Bearer ghi789secret sk_live_jkl012secret 0123456789abcdef0123456789abcdef" }, "https://api.resend.com/domains?api_key=abc123secret");
+    for (const secret of ["abc123secret", "def456secret", "ghi789secret", "jkl012secret", "0123456789abcdef0123456789abcdef"]) expect(message).not.toContain(secret);
+  });
+
+  it("stays short, whatever a service answers", async () => {
+    expect((await refusal({ message: "word ".repeat(500) })).message.length).toBeLessThan(300);
+  });
+
+  it("is cleaned the same way when it comes back in a delivery report", () => {
+    const event = deliveryEventOf({ type: "email.bounced", data: { email_id: "e1", bounce: { message: `550 refused, key=${KEY}` } } } as never);
+    expect(JSON.stringify(event)).not.toContain(KEY);
+    expect(JSON.stringify(event)).toContain("550 refused");
   });
 });

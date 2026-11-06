@@ -5,6 +5,7 @@ import { resolvedAtAfter, statusAfterReply, type TicketStatus } from "@/domain/t
 import type { Tried } from "@/domain/tried";
 import { sha256 } from "@/infrastructure/crypto/secrets";
 import { ProviderError } from "@/infrastructure/connectors/http";
+import { withoutSecrets } from "@/infrastructure/connectors/without-secrets";
 import type { Database } from "@/infrastructure/db/client";
 import { contact, message, product, ticket } from "@/infrastructure/db/schema/support";
 import { withWorkspace } from "@/infrastructure/db/tenant";
@@ -80,7 +81,7 @@ function textWithLink(body: string, context: MailContext, url: string): string {
   return [body, "", "--", ...(signature ? [signature] : []), `Ticket #${context.ticket.number}. Read or answer this conversation: ${url}`, ""].join("\n");
 }
 
-const whyNotSent = (error: unknown) => (error instanceof Error ? error.message : "The service didn’t answer.");
+const whyNotSent = (error: unknown) => (error instanceof Error ? withoutSecrets(error.message) : "The service didn’t answer.");
 
 async function recordFailure(services: Services, workspaceId: string, messageId: string, why: string): Promise<Tried> {
   await withWorkspace(services.db, workspaceId, (tx) => tx.update(message).set({ deliveryState: "failed", deliveryError: why }).where(eq(message.id, messageId)));

@@ -2,6 +2,7 @@ import { parse } from "node-html-parser";
 import type { DeliveryOutcome, InboundEmail, MailEvent } from "@/application/ports";
 import { messageIdsIn, parseAddress, type MailAuthentication } from "@/domain/email";
 import type { NotedAttachment } from "@/infrastructure/db/schema/support";
+import { withoutSecrets } from "../without-secrets";
 
 /**
  * What Resend's webhooks and its received-mail API say, turned into this app's own words. A webhook
@@ -46,11 +47,16 @@ const OUTCOMES: Record<string, DeliveryOutcome> = {
   "email.suppressed": "failed",
 };
 
+function reasonIn(event: ResendEvent): string | null {
+  const reason = event.data?.bounce?.message ?? event.data?.failed?.reason;
+  return reason ? withoutSecrets(reason) : null;
+}
+
 export function deliveryEventOf(event: ResendEvent): MailEvent {
   const outcome = OUTCOMES[event.type ?? ""];
   const providerId = event.data?.email_id;
   if (!outcome || !providerId) return { type: "ignored" };
-  return { type: "delivery", report: { providerId, outcome, messageId: event.data?.message_id ?? null, detail: event.data?.bounce?.message ?? event.data?.failed?.reason ?? null } };
+  return { type: "delivery", report: { providerId, outcome, messageId: event.data?.message_id ?? null, detail: reasonIn(event) } };
 }
 
 /** The text of a mail that has only HTML: tags gone, and scripts and styles with them, since it is shown as text. */

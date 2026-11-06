@@ -180,3 +180,10 @@ describe("a connection in use", () => {
     expect(await safeCheck({ check: () => Promise.reject("nothing") })).toEqual({ ok: false, detail: "The service didn’t answer." });
   });
 });
+
+describe("a check that throws something holding a key", () => {
+  it("says it without the key", async () => {
+    const answer = await safeCheck({ check: async () => { throw new Error("GET https://api.example.test/v1?api_key=abc123secret failed"); } } as never);
+    expect(answer).toEqual({ ok: false, detail: "GET https://api.example.test failed" });
+  });
+});

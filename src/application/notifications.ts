@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { noticeMail, noticeRecipients, type NoticeKind, type NoticePreference } from "@/domain/notifications";
 import type { Tried } from "@/domain/tried";
+import { withoutSecrets } from "@/infrastructure/connectors/without-secrets";
 import type { Database } from "@/infrastructure/db/client";
 import { message, notificationPreference, product } from "@/infrastructure/db/schema/support";
 import { workspace } from "@/infrastructure/db/schema/tenancy";
@@ -80,7 +81,7 @@ export async function notifyTeam(services: Services, workspaceId: string, notice
   try {
     return await tell(services, workspaceId, notice);
   } catch (error) {
-    const why = error instanceof Error ? error.message : "The mail service didn’t answer.";
+    const why = error instanceof Error ? withoutSecrets(error.message) : "The mail service didn’t answer.";
     await recordFailure(services, workspaceId, notice, why);
     return { status: "failed", error: why };
   }

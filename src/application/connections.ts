@@ -3,6 +3,7 @@ import { CONNECTORS, connectorOf, readFields, type Capability, type Connector, t
 import { managesSettings, NOT_A_MANAGER_OF_SETTINGS } from "@/domain/team";
 import type { AdapterClient } from "@/infrastructure/connectors/adapter";
 import { adapterOf } from "@/infrastructure/connectors";
+import { withoutSecrets } from "@/infrastructure/connectors/without-secrets";
 import { open, randomToken, seal, type Credentials } from "@/infrastructure/crypto/secrets";
 import { connection } from "@/infrastructure/db/schema/connections";
 import { withWorkspace } from "@/infrastructure/db/tenant";
@@ -64,7 +65,7 @@ export async function safeCheck(client: AdapterClient) {
   try {
     return await client.check();
   } catch (error) {
-    return { ok: false, detail: error instanceof Error ? error.message : "The service didn’t answer." };
+    return { ok: false, detail: error instanceof Error ? withoutSecrets(error.message) : "The service didn’t answer." };
   }
 }
 

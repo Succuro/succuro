@@ -8,7 +8,7 @@ import { teamOf } from "@/application/team";
 import { listTickets, tagsInUse, type InboxTicket } from "@/application/ticket-queries";
 import { Loading, Shell } from "@/components/shell";
 import { ActionForm } from "@/components/try-button";
-import { Badge, INLINE_FIELD, QuietButton } from "@/components/ui";
+import { Badge, INLINE_FIELD, PrimaryLink, QuietButton } from "@/components/ui";
 import { when } from "@/components/when";
 import { PRIORITY_NAMES, STATUS_MEANINGS, STATUS_NAMES, TICKET_PRIORITIES, TICKET_STATUSES, type TicketStatus } from "@/domain/tickets";
 import { currentSeat } from "@/infrastructure/auth/session";
@@ -26,7 +26,7 @@ function StatusTabs({ query, counts }: { query: InboxQuery; counts: Record<Ticke
   return (
     <nav aria-label="Status" className="flex flex-wrap gap-1">
       {tabs.map(({ key, label, count, title }) => (
-        <Link key={key} href={inboxHref(query, { status: key, page: undefined })} title={title} aria-current={tab === key ? "page" : undefined} className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${tab === key ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+        <Link key={key} href={inboxHref(query, { status: key, page: undefined })} title={title} aria-current={tab === key ? "page" : undefined} className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${tab === key ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
           {label} <span className="font-mono text-xs">{count}</span>
         </Link>
       ))}
@@ -69,7 +69,7 @@ function Filters({ query, products, categories, team, tags }: { query: InboxQuer
 
 function TicketRow({ ticket, assignee }: { ticket: InboxTicket; assignee?: string }) {
   return (
-    <li className="flex items-start gap-3 px-4 py-3">
+    <li className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-surface">
       <input type="checkbox" name="ticket" value={ticket.id} aria-label={`Select ticket ${ticket.number}`} className="mt-1" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -99,16 +99,19 @@ function TicketRow({ ticket, assignee }: { ticket: InboxTicket; assignee?: strin
   );
 }
 
-/** What the selected tickets become. Each field left alone changes nothing. */
+/** What the selected tickets become, shown once some are selected. Each field left alone changes nothing. */
 function BulkBar({ team }: { team: Named[] }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
+    <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-t-2xl border-b bg-surface px-4 py-2">
       <SelectAll />
-      <Choice name="status" label="Status: no change" options={TICKET_STATUSES.map((status) => ({ value: status, label: STATUS_NAMES[status] }))} />
-      <Choice name="assignee" label="Assignee: no change" options={[{ value: "none", label: "Unassigned" }, ...asOptions(team)]} />
-      <Choice name="priority" label="Priority: no change" options={TICKET_PRIORITIES.map((priority) => ({ value: priority, label: PRIORITY_NAMES[priority] }))} />
-      <input name="tag" placeholder="Add a tag" aria-label="Add a tag" maxLength={40} className={`${INLINE_FIELD} w-32`} />
-      <QuietButton type="submit">Apply to selected</QuietButton>
+      <span className="ml-1 text-sm text-muted-foreground group-has-[input[name=ticket]:checked]:hidden">Select tickets to change several at once</span>
+      <div className="hidden flex-wrap items-center gap-2 group-has-[input[name=ticket]:checked]:flex">
+        <Choice name="status" label="Status: no change" options={TICKET_STATUSES.map((status) => ({ value: status, label: STATUS_NAMES[status] }))} />
+        <Choice name="assignee" label="Assignee: no change" options={[{ value: "none", label: "Unassigned" }, ...asOptions(team)]} />
+        <Choice name="priority" label="Priority: no change" options={TICKET_PRIORITIES.map((priority) => ({ value: priority, label: PRIORITY_NAMES[priority] }))} />
+        <input name="tag" placeholder="Add a tag" aria-label="Add a tag" maxLength={40} className={`${INLINE_FIELD} w-32`} />
+        <QuietButton type="submit">Apply to selected</QuietButton>
+      </div>
     </div>
   );
 }
@@ -150,19 +153,17 @@ async function Inbox({ searchParams }: Pick<PageProps<"/tickets">, "searchParams
       <div className="flex flex-wrap items-center justify-between gap-3">
         <StatusTabs query={query} counts={counts} />
         <div className="flex items-center gap-3 text-sm">
-          <Link href={inboxHref(query, { assignee: "me", page: undefined })} className="text-muted-foreground hover:text-foreground">
+          <Link href={inboxHref(query, { assignee: "me", page: undefined })} aria-current={one(query, "assignee") === "me" ? "true" : undefined} className="text-muted-foreground hover:text-foreground aria-[current=true]:font-medium aria-[current=true]:text-foreground">
             Mine
           </Link>
-          <Link href={inboxHref(query, { assignee: "none", page: undefined })} className="text-muted-foreground hover:text-foreground">
+          <Link href={inboxHref(query, { assignee: "none", page: undefined })} aria-current={one(query, "assignee") === "none" ? "true" : undefined} className="text-muted-foreground hover:text-foreground aria-[current=true]:font-medium aria-[current=true]:text-foreground">
             Unassigned
           </Link>
-          <Link href="/tickets/new" className="rounded-lg border px-3 py-1.5 font-medium transition-colors hover:bg-accent">
-            New ticket
-          </Link>
+          <PrimaryLink href="/tickets/new">New ticket</PrimaryLink>
         </div>
       </div>
       <Filters query={query} products={asOptions(products).map(({ value, label }) => ({ id: value, name: label }))} categories={categories} team={team} tags={tags} />
-      <ActionForm action={bulkAction} className="rounded-2xl border bg-card">
+      <ActionForm action={bulkAction} className="group rounded-2xl border bg-card">
         <BulkBar team={team} />
         {tickets.length === 0 ? (
           <Empty anyTicket={anyTicket} />

@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -33,13 +34,14 @@ async function Content({ params }: Pick<PageProps<"/tickets/[number]">, "params"
   return (
     <>
       <p className="text-sm">
-        <Link href="/tickets" className="text-muted-foreground hover:text-foreground">
+        <Link href="/tickets" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+          <ArrowLeft aria-hidden className="size-3.5" />
           Inbox
         </Link>
       </p>
       <div className="mt-2 mb-6 flex flex-wrap items-center gap-2">
-        <h1 className="text-2xl font-semibold tracking-[-0.03em]">
-          <span className="font-mono text-base text-muted-foreground">#{number}</span> {ticket.ticket.subject}
+        <h1 className="text-2xl font-bold tracking-[-0.025em]">
+          <span className="font-mono text-base font-normal text-muted-foreground">#{number}</span> {ticket.ticket.subject}
         </h1>
         <Badge tone={ticket.ticket.status === "open" ? "calm" : "plain"}>{STATUS_NAMES[ticket.ticket.status]}</Badge>
         <Badge>{PRIORITY_NAMES[ticket.ticket.priority]}</Badge>

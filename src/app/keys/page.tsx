@@ -59,7 +59,7 @@ async function Keys() {
 export default function KeysPage() {
   return (
     <Shell section="settings">
-      <PageHeading title="API keys">For your apps to open tickets and your dashboards to read figures. Each key does only what it was given.</PageHeading>
+      <PageHeading title="API keys">For your apps to open tickets and your dashboards to read figures. Each key does only what it was given, and stops working when whoever made it leaves the workspace.</PageHeading>
       <SettingsNav current="/keys" />
       <Suspense fallback={<Loading />}>
         <Keys />

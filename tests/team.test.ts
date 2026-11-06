@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
+import { accessOfKey, createApiKey, createReadKey } from "@/application/api-keys";
 import { changeRole, removeMember, roleIn, teamOf } from "@/application/team";
 import { workspacesOf } from "@/application/workspaces";
 import { INVITATION_REFUSALS, managesTeam, refusalToChangeRole, refusalToLeave, refusalToRemove, type Teammate } from "@/domain/team";
@@ -202,5 +203,68 @@ describe("a workspace's team", () => {
       await removeMember(db, ids.workspaceId, ids.mateId, ids.ownerId);
       expect(await heldBy(ids.workspaceId, ids)).toEqual({ open: ids.mateId, settled: ids.mateId, mail: ids.mateId });
     });
+  });
+});
+
+describe("the keys of someone leaving", () => {
+  let db: Database;
+  beforeAll(async () => {
+    db = await createTestDatabase();
+  });
+
+  async function madeKey(workspaceId: string, userId: string, name = "Dashboard") {
+    const made = await createReadKey(db, workspaceId, userId, name);
+    if (!made.ok) throw new Error(made.error);
+    return made.key;
+  }
+  const opens = async (key: string) => (await accessOfKey(db, key, "figures:read")).status;
+
+  async function withAdmin() {
+    const { workspaceId, userId: ownerId } = await createTestWorkspace(db);
+    const adminId = crypto.randomUUID();
+    await db.insert(user).values({ id: adminId, name: "Bea", email: `${adminId}@example.test` });
+    await db.insert(member).values({ workspaceId, userId: adminId, role: "admin" });
+    return { workspaceId, ownerId, adminId };
+  }
+
+  it("stop working when they're removed, made on the screen or by their assistant, and the removal says so", async () => {
+    const { workspaceId, ownerId, adminId } = await withAdmin();
+    const onScreen = await createApiKey(db, workspaceId, adminId, "From the screen", ["figures:read", "tickets:create"]);
+    if (!onScreen.ok) throw new Error(onScreen.error);
+    const byAssistant = await madeKey(workspaceId, adminId, "From an assistant");
+    expect(await opens(onScreen.key)).toBe("ok");
+    expect(await opens(byAssistant)).toBe("ok");
+    const removed = await removeMember(db, workspaceId, ownerId, adminId);
+    expect(removed).toMatchObject({ ok: true, said: expect.stringContaining("API keys") });
+    expect(await opens(onScreen.key)).toBe("unknown");
+    expect(await opens(byAssistant)).toBe("unknown");
+  });
+
+  it("stop working when they leave by themselves", async () => {
+    const { workspaceId, adminId } = await withAdmin();
+    const key = await madeKey(workspaceId, adminId);
+    expect((await removeMember(db, workspaceId, adminId, adminId)).ok).toBe(true);
+    expect(await opens(key)).toBe("unknown");
+  });
+
+  it("leave everyone else's alone, and their own in a workspace they stay in", async () => {
+    const { workspaceId, ownerId, adminId } = await withAdmin();
+    const owners = await madeKey(workspaceId, ownerId);
+    const { workspaceId: elsewhere, userId: otherOwner } = await createTestWorkspace(db);
+    await db.insert(member).values({ workspaceId: elsewhere, userId: adminId, role: "admin" });
+    const theirsElsewhere = await madeKey(elsewhere, adminId);
+    const removed = await removeMember(db, workspaceId, ownerId, adminId);
+    expect(removed).toEqual({ ok: true, said: "This person no longer has access to this workspace." });
+    expect(await opens(owners)).toBe("ok");
+    expect(await opens(theirsElsewhere)).toBe("ok");
+    expect(await roleIn(db, elsewhere, otherOwner)).toBe("owner");
+  });
+
+  it("survive a removal that was refused", async () => {
+    const { workspaceId, ownerId, adminId } = await withAdmin();
+    const key = await madeKey(workspaceId, ownerId);
+    expect((await removeMember(db, workspaceId, ownerId, ownerId)).ok).toBe(false);
+    expect((await removeMember(db, workspaceId, adminId, ownerId)).ok).toBe(false);
+    expect(await opens(key)).toBe("ok");
   });
 });

@@ -53,7 +53,7 @@ describe("who may create an account", () => {
 
   it("refuses an address not on the list", () => {
     expect(sign.mayJoin({ email: "stranger@example.com", emailVerified: true })).toBe(false);
-    expect(sign.passwordSignUpRefusal("stranger@example.com", { RESEND_API_KEY: "key" })).toContain("invited people only");
+    expect(sign.mayCreatePasswordAccount("stranger@example.com")).toBe(false);
   });
 
   it("lets someone with an invitation in through a provider, once the provider has verified the address", () => {
@@ -63,14 +63,13 @@ describe("who may create an account", () => {
   });
 
   it("lets someone with an invitation sign up with a password, if the link proving it can be mailed", () => {
-    expect(sign.passwordSignUpRefusal("invited@example.com", { RESEND_API_KEY: "key" }, true)).toBeNull();
-    expect(sign.passwordSignUpRefusal("invited@example.com", { RESEND_API_KEY: undefined }, true)).toContain("confirmation link");
+    expect(sign.mayCreatePasswordAccount("invited@example.com", true)).toBe(true);
+    expect(sign.passwordSignUpClosed({ RESEND_API_KEY: "key" })).toBeNull();
+    expect(sign.passwordSignUpClosed({ RESEND_API_KEY: undefined })).toContain("confirmation link");
   });
 
   it("lets a listed address sign up with a password only if the link proving it can be mailed", () => {
-    expect(sign.passwordSignUpRefusal("founder@example.com", { RESEND_API_KEY: "key" })).toBeNull();
-    const refusal = sign.passwordSignUpRefusal("founder@example.com", { RESEND_API_KEY: undefined });
-    expect(refusal).toContain("confirmation link");
+    expect(sign.mayCreatePasswordAccount("founder@example.com")).toBe(true);
   });
 });
 

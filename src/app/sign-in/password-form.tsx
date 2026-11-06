@@ -52,7 +52,7 @@ export function PasswordForm({ next }: { next: string }) {
     const refused = await ask(email, password, name);
     setBusy(false);
     if (refused) return setError(wordsFor(refused));
-    if (mode === "sign-up") setSent(`A confirmation link is on its way to ${email}: open it to activate your account.`);
+    if (mode === "sign-up") setSent(`If ${email} may join, a confirmation link is on its way there: open it to activate your account. Joining takes an invitation.`);
     if (mode === "forgot") setSent(`If ${email} has an account, a link to choose a new password is on its way there.`);
   }
 

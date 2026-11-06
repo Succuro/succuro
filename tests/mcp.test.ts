@@ -46,7 +46,7 @@ async function desk() {
   return { ...seat, product, call: clientFor(seat.workspaceId, seat.userId) };
 }
 
-const EXPECTED_TOOLS = ["add_note", "create_ticket", "draft_reply", "find_contact", "list_saved_replies", "list_tickets", "list_workspaces", "read_ticket", "send_reply", "support_figures", "update_ticket"];
+const EXPECTED_TOOLS = ["add_note", "create_api_key", "create_ticket", "draft_reply", "find_contact", "list_api_keys", "list_saved_replies", "list_tickets", "list_workspaces", "read_ticket", "revoke_api_key", "send_reply", "support_figures", "update_ticket"];
 
 describe("the tools", () => {
   it("are these, and no others", async () => {
@@ -55,10 +55,10 @@ describe("the tools", () => {
     expect(tools.map(({ name }: { name: string }) => name).sort()).toEqual(EXPECTED_TOOLS);
   });
 
-  it("offer nothing that changes the approval setting, keys, connections or members", async () => {
+  it("offer nothing that changes the approval setting, connections or members", async () => {
     const { call } = await desk();
     const { tools } = await call("tools/list");
-    for (const { name } of tools) expect(name).not.toMatch(/setting|approv|invit|member|team|role|key|connect/i);
+    for (const { name } of tools) expect(name).not.toMatch(/setting|approv|invit|member|team|role|connect/i);
   });
 
   it("mark what they only read, and what writes to a person", async () => {

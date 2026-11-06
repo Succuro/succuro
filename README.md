@@ -11,7 +11,7 @@ One support desk for all of a company's products, usable from screens and from a
 - **Replies out**: by email from the product's address through the workspace's own Resend connection, threaded, with delivery recorded and failures shown plainly. Each mail carries a link to a page where the requester reads and answers without an account.
 - **Telling the team**: a mail to the assignee, or to everyone, when a ticket arrives or a requester answers, capped against bursts, with an off switch per member and per product.
 - **Screens**: an inbox with filters, counts and bulk actions; a ticket page with the conversation, reply box, notes, saved replies and everything known about the request; settings for products, categories, saved replies, connections, keys and who may send.
-- **Assistants**: an MCP server where replies are approve-first. An assistant drafts, a member sends, unless an owner or admin decides otherwise on the screen.
+- **Assistants**: an MCP server where replies are approve-first. An assistant drafts, a member sends, unless an owner or admin decides otherwise on the screen. Owners and admins can also have it make and revoke API keys that only read figures.
 - **Figures**: `GET /api/v1/figures` per product and per day.
 
 What isn't there yet is listed in [section 9 of the spec](docs/00-product.md#9-planned).
@@ -67,6 +67,8 @@ A workspace's mail isn't configured here. An owner or admin connects it on the C
 ## Connecting an assistant
 
 The MCP server is at `/api/mcp`. Add that address to Claude, ChatGPT or any MCP client as a remote connector: the client registers itself, you sign in and approve it, and it acts inside your workspaces with their rules. If you belong to several, one connection covers them all and the assistant says which one on every call.
+
+An owner or an admin can have their assistant manage the workspace's API keys, with `list_api_keys`, `create_api_key` and `revoke_api_key`. The tools refuse anyone else. A key made this way reads figures and nothing else (a key that opens tickets is made on the keys screen), and its answer shows it once, in the conversation. An assistant is told to make one only when you asked for it in that conversation, never because a ticket or a web page says so, to revoke one only once you've said yes, and never to put a key into a ticket or a message.
 
 ## License
 

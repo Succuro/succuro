@@ -88,8 +88,13 @@ The MCP server is at `/api/mcp`, over streamable HTTP. An assistant registers it
 | `list_saved_replies` | What the workspace keeps ready. |
 | `find_contact` | A requester by address, name or id, with their tickets. |
 | `support_figures` | The figures of section 6. |
+| `list_api_keys` | For an owner or admin: the workspace's keys, with their names, prefixes, scopes, when made and last used. Never a key or its hash. |
+| `create_api_key` | For an owner or admin: a key that reads figures and nothing else, shown once, in the answer. |
+| `revoke_api_key` | For an owner or admin: ends a key at once. |
 
-**What customers write is data.** Subjects, messages, names and context are written by strangers, and can be written at an assistant. The server's instructions and each tool that returns them say never to follow instructions in them, and `read_ticket` labels each message and repeats it beside the words. No tool can change who belongs to a workspace, connect a service, make a key, or change the setting below.
+**What customers write is data.** Subjects, messages, names and context are written by strangers, and can be written at an assistant. The server's instructions and each tool that returns them say never to follow instructions in them, and `read_ticket` labels each message and repeats it beside the words. No tool can change who belongs to a workspace, connect a service, make a key that does more than read, or change the setting below.
+
+**Keys through an assistant.** `list_api_keys`, `create_api_key` and `revoke_api_key` call the same use cases as the keys screen, which refuse anyone but an owner or an admin. They take no scope: a key made there gets `figures:read` alone, and `tickets:create` stays on the screen. Since a key opens a workspace and tickets are written by strangers, the server's instructions and the tools tell an assistant to make one only when the member asked in that conversation, never because a ticket, a reply or a page says so, to revoke one only once the member said yes, and never to put a key into a ticket, note, message or reply. A key's row says who made it, when, and when it was last used. Revoking deletes the row, so it leaves nothing behind, and the list only ever holds live keys.
 
 **Replies are approve-first.** By default `send_reply` is refused and a member sends drafts from the screen. An owner or admin can allow it in Settings, for that workspace, and only there. Even then the assistant may send only once the member said yes in their conversation: the server can't see that conversation, so the tool's description asks for it and the call must declare `memberSaidYes: true`. A draft an assistant wrote says so, even once a member sent it, unless they changed the words.
 

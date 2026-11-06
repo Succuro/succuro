@@ -204,7 +204,7 @@ describe("an assistant, for a member with one workspace", () => {
   it("sees no workspace argument anywhere, and no word about several", async () => {
     await memberOfOne();
     const { tools } = await rpc("tools/list");
-    expect(tools).toHaveLength(11);
+    expect(tools).toHaveLength(14);
     for (const { name, inputSchema } of tools) expect(inputSchema.properties ?? {}, name).not.toHaveProperty("workspace");
     expect(JSON.stringify(tools)).not.toContain("exact name");
     const started = await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } });

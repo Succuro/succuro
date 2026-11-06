@@ -38,9 +38,9 @@ async function Content() {
 /** How this workspace sorts its tickets. */
 export default function CategoriesPage() {
   return (
-    <Shell>
+    <Shell section="settings">
       <PageHeading title="Categories">How this workspace sorts its tickets.</PageHeading>
-      <SettingsNav />
+      <SettingsNav current="/settings/categories" />
       <Suspense fallback={<Loading />}>
         <Content />
       </Suspense>

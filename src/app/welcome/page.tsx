@@ -3,10 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { mayStartWorkspace, startWorkspace, workspacesOf } from "@/application/workspaces";
-import { Logo } from "@/components/logo";
-import { Loading } from "@/components/shell";
+import { Loading, Standalone } from "@/components/shell";
 import { SignOutButton } from "@/components/sign-out-button";
-import { Card, PrimaryButton } from "@/components/ui";
+import { Card, FIELD, PrimaryButton } from "@/components/ui";
 import { safeNext } from "@/domain/safe-next";
 import { currentMember, enterWorkspace } from "@/infrastructure/auth/session";
 import { db } from "@/infrastructure/db/client";
@@ -27,7 +26,7 @@ async function create(formData: FormData) {
 function NoWorkspace() {
   return (
     <Card className="mt-8 w-full max-w-md">
-      <h1 className="text-xl font-semibold tracking-[-0.03em]">You don’t have access to any workspace</h1>
+      <h1 className="text-xl font-bold tracking-[-0.025em]">You don’t have access to any workspace</h1>
       <p className="mt-2 text-sm text-muted-foreground">Workspaces here are joined by invitation: ask the person who runs yours for a new link, then open it.</p>
       <div className="mt-5 text-sm text-muted-foreground">
         <SignOutButton />
@@ -48,11 +47,11 @@ async function Form({ searchParams }: { searchParams: PageProps<"/welcome">["sea
   }
   return (
     <Card className="mt-8 w-full max-w-md">
-      <h1 className="text-xl font-semibold tracking-[-0.03em]">Which company is this desk for?</h1>
+      <h1 className="text-xl font-bold tracking-[-0.025em]">Which company is this desk for?</h1>
       <p className="mt-2 text-sm text-muted-foreground">Each workspace keeps its products, tickets and connections to itself.</p>
       <form action={create} className="mt-5 flex flex-col gap-3">
         <input type="hidden" name="next" value={safeNext(next)} />
-        <input name="name" required maxLength={80} placeholder="Acme" aria-label="Company name" className="rounded-lg border bg-surface px-3 py-2 text-sm outline-none focus:border-ring" />
+        <input name="name" required maxLength={80} placeholder="Acme" aria-label="Company name" className={FIELD} />
         <PrimaryButton type="submit">Start the workspace</PrimaryButton>
       </form>
       {hasWorkspace && (
@@ -69,12 +68,10 @@ async function Form({ searchParams }: { searchParams: PageProps<"/welcome">["sea
 /** The first thing a new member sees, and where an admin starts another: a workspace, named. */
 export default function WelcomePage({ searchParams }: PageProps<"/welcome">) {
   return (
-    <main className="relative isolate flex flex-1 flex-col items-center justify-center px-4 py-16">
-      <div aria-hidden className="absolute inset-x-0 top-0 -z-10 h-96 bg-glow" />
-      <Logo id="welcome" />
+    <Standalone>
       <Suspense fallback={<Loading />}>
         <Form searchParams={searchParams} />
       </Suspense>
-    </main>
+    </Standalone>
   );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { Logo } from "@/components/logo";
+import { Standalone } from "@/components/shell";
 import { BRAND } from "@/domain/brand";
 import { safeNext } from "@/domain/safe-next";
 import { signInOf, type SignInMethods } from "@/infrastructure/auth/sign-in";
@@ -45,15 +45,13 @@ async function SignIn({ searchParams }: Pick<PageProps<"/sign-in">, "searchParam
 /** Where members sign in, and where an assistant sends them before they approve it. */
 export default function SignInPage({ searchParams }: PageProps<"/sign-in">) {
   return (
-    <main className="relative isolate flex flex-1 flex-col items-center justify-center px-4 py-16">
-      <div aria-hidden className="absolute inset-x-0 top-0 -z-10 h-96 bg-glow" />
-      <Logo id="sign-in" />
-      <h1 className="mt-8 text-center text-3xl font-semibold tracking-[-0.04em]">
-        One support desk, <span className="font-serif font-normal italic tracking-normal text-sheen">for all your products</span>
+    <Standalone>
+      <h1 className="mt-8 text-center text-3xl font-bold tracking-[-0.03em]">
+        One support desk, <span className="text-link">for all your products</span>
       </h1>
       <Suspense>
         <SignIn searchParams={searchParams} />
       </Suspense>
-    </main>
+    </Standalone>
   );
 }

@@ -71,13 +71,13 @@ async function Content({ params }: Pick<PageProps<"/connections/[kind]">, "param
   return (
     <>
       <PageHeading title={connector.name}>{connector.summary}</PageHeading>
-      <SettingsNav />
+      <SettingsNav current="/connections" />
       <div className="max-w-3xl space-y-4">
         {mine.map((connection) => (
           <Connection key={connection.id} connection={connection} connector={connector} mayChange={mayChange} />
         ))}
         <Card>
-          <h2 className="mb-4 font-semibold tracking-[-0.02em]">{mine.length > 0 ? "Connect again, with a new key" : "Connect"}</h2>
+          <h2 className="mb-4 font-bold tracking-[-0.015em]">{mine.length > 0 ? "Connect again, with a new key" : "Connect"}</h2>
           <ol className="mb-5 list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
             {connector.setup.map((step) => (
               <li key={step}>{step}</li>
@@ -101,7 +101,7 @@ async function Content({ params }: Pick<PageProps<"/connections/[kind]">, "param
 /** One service: the account connected, and how to connect it. */
 export default function ConnectionPage({ params }: PageProps<"/connections/[kind]">) {
   return (
-    <Shell>
+    <Shell section="settings">
       <Suspense fallback={<Loading />}>
         <Content params={params} />
       </Suspense>

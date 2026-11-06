@@ -195,7 +195,7 @@ async function Inbox({ searchParams }: Pick<PageProps<"/tickets">, "searchParams
 /** Every ticket from every product, by what waits for whom. */
 export default function InboxPage({ searchParams }: PageProps<"/tickets">) {
   return (
-    <Shell>
+    <Shell section="inbox">
       <Suspense fallback={<Loading />}>
         <Inbox searchParams={searchParams} />
       </Suspense>

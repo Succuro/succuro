@@ -68,7 +68,7 @@ async function Content({ params }: Pick<PageProps<"/tickets/[number]">, "params"
 /** One ticket: the conversation, the reply box and the note, and everything known beside them. */
 export default function TicketPage({ params }: PageProps<"/tickets/[number]">) {
   return (
-    <Shell>
+    <Shell section="inbox">
       <Suspense fallback={<Loading />}>
         <Content params={params} />
       </Suspense>

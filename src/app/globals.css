@@ -1,15 +1,13 @@
 @import "tailwindcss";
 @import "./theme.css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (@media (prefers-color-scheme: dark));
 
 @theme inline {
   /* Typography: the font files are loaded in the root layout. */
   --font-sans: var(--font-brand-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-brand-mono), ui-monospace, SFMono-Regular, monospace;
   --font-heading: var(--font-brand-heading, var(--font-brand-sans)), ui-sans-serif, system-ui, sans-serif;
-  /* The editorial accent: a few words of a heading in serif italic. */
-  --font-serif: var(--font-brand-serif), ui-serif, Georgia, serif;
 
   /* Semantic colors — values live in theme.css */
   --color-background: var(--background);
@@ -20,6 +18,7 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -62,13 +61,16 @@
   --color-brand-900: var(--brand-900);
   --color-brand-950: var(--brand-950);
 
-  /* What is fine, and what needs a look. */
+  --color-hivis-200: var(--hivis-200);
+  --color-hivis-300: var(--hivis-300);
+  --color-hivis-400: var(--hivis-400);
+  --color-hivis-500: var(--hivis-500);
+
+  /* What is fine, what needs a look, and what the team keeps to itself. */
   --color-calm: var(--calm);
   --color-alert: var(--alert);
-  --color-warm-300: var(--warm-300);
-  --color-warm-400: var(--warm-400);
-  --color-warm-500: var(--warm-500);
-  --color-warm-600: var(--warm-600);
+  --color-note: var(--note);
+  --color-note-border: var(--note-border);
 
   /* Radius scale, derived from --radius */
   --radius-sm: calc(var(--radius) * 0.6);
@@ -98,50 +100,33 @@
   h2,
   h3 {
     font-family: var(--font-heading);
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
     text-wrap: balance;
   }
   .grid > * {
     min-width: 0;
   }
+  /* Whoever moves by keyboard always sees where they are. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--primary);
+  }
+  button:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+  ::selection {
+    background-color: color-mix(in oklab, var(--hivis-400) 55%, transparent);
+  }
 }
 
-@utility bg-glow {
-  background-image: radial-gradient(
-    ellipse 60% 50% at 50% -10%,
-    color-mix(in oklab, var(--calm) 14%, transparent),
-    transparent
-  );
-}
-/* The few words of a heading that carry the idea. */
-@utility text-sheen {
-  background-image: linear-gradient(180deg, var(--sheen-top) 20%, var(--sheen-bottom));
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-}
-/* A card with a hairline that catches the light at the top and fades down its sides. */
-@utility card-premium {
-  border: 1px solid transparent;
-  background:
-    linear-gradient(180deg, color-mix(in oklab, var(--foreground) 3%, transparent), transparent 38%) padding-box,
-    linear-gradient(var(--card), var(--card)) padding-box,
-    linear-gradient(180deg, color-mix(in oklab, var(--foreground) 15%, transparent), color-mix(in oklab, var(--foreground) 5%, transparent) 60%) border-box;
-}
-/* A faint vertical sheen on cards, top-lit like glass. */
-@utility card-sheen {
-  background-image: linear-gradient(180deg, color-mix(in oklab, var(--foreground) 3.5%, transparent), transparent 40%);
-}
-/* A fine grain over the whole page, as on film: it takes the digital edge off flat darks. */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  pointer-events: none;
-  opacity: 0.028;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-.dark body::after {
-  opacity: 0.045;
+/* The chequered band: two rows of squares, as on the side of a rescue vehicle. */
+@utility band-check {
+  height: calc(var(--check) * 2);
+  background-image: conic-gradient(var(--check-a) 25%, var(--check-b) 0 50%, var(--check-a) 0 75%, var(--check-b) 0);
+  background-size: calc(var(--check) * 2) calc(var(--check) * 2);
 }

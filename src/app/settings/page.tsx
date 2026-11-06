@@ -31,7 +31,7 @@ async function AssistantSending({ seat }: { seat: Seat }) {
   const mayChange = managesSettings(seat.role);
   return (
     <Card>
-      <h2 className="font-semibold tracking-[-0.02em]">Who sends replies</h2>
+      <h2 className="font-bold tracking-[-0.015em]">Who sends replies</h2>
       <p className="mt-1 text-sm text-muted-foreground">Only an owner or admin changes this, here. No assistant can.</p>
       <div className="mt-4">
         <ActionForm action={saveAssistantSendingAction} submit={mayChange ? "Save" : undefined} busy="…" className="flex flex-col gap-4">
@@ -58,7 +58,7 @@ async function Notifications({ seat }: { seat: Seat }) {
   const mailReady = hasOwnMail(env());
   return (
     <Card>
-      <h2 className="font-semibold tracking-[-0.02em]">Notifications</h2>
+      <h2 className="font-bold tracking-[-0.015em]">Notifications</h2>
       <p className="mt-1 text-sm text-muted-foreground">Your own choice, in this workspace. You’re mailed when a ticket arrives or a requester answers, if the ticket is yours or nobody holds it, and never about your own words.</p>
       {!mailReady && <p className="mt-3 text-sm text-alert">This instance can’t send mail: its RESEND_API_KEY isn’t set, so nobody is told about tickets. They still arrive in the inbox.</p>}
       <div className="mt-4">
@@ -88,7 +88,7 @@ function ConnectAnAssistant() {
   const address = mcpResource(env());
   return (
     <Card>
-      <h2 className="font-semibold tracking-[-0.02em]">Connect your assistant</h2>
+      <h2 className="font-bold tracking-[-0.015em]">Connect your assistant</h2>
       <p className="mt-2 text-sm text-muted-foreground">The address of this desk’s MCP server:</p>
       <div className="mt-3">
         <Code>{address}</Code>
@@ -125,9 +125,9 @@ async function Content() {
 /** Who may send, how to reach the desk from an assistant, and who works in it. */
 export default function SettingsPage() {
   return (
-    <Shell>
+    <Shell section="settings">
       <PageHeading title="Settings" />
-      <SettingsNav />
+      <SettingsNav current="/settings" />
       <Suspense fallback={<Loading />}>
         <Content />
       </Suspense>

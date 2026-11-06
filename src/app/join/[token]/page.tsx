@@ -3,8 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { invitationPath, seeInvitation } from "@/application/invitations";
-import { Logo } from "@/components/logo";
-import { Loading } from "@/components/shell";
+import { Loading, Standalone } from "@/components/shell";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Card, PrimaryButton } from "@/components/ui";
 import { HOME } from "@/domain/safe-next";
@@ -20,7 +19,7 @@ export const metadata: Metadata = { title: "Join a workspace", robots: { index: 
 function Refused({ refusal, back }: { refusal: InvitationRefusal; back: string }) {
   return (
     <Card className="mt-8 w-full max-w-md">
-      <h1 className="text-xl font-semibold tracking-[-0.03em]">This invitation doesn’t open a workspace for you</h1>
+      <h1 className="text-xl font-bold tracking-[-0.025em]">This invitation doesn’t open a workspace for you</h1>
       <p className="mt-2 text-sm text-muted-foreground">{INVITATION_REFUSALS[refusal]}</p>
       <div className="mt-5 text-sm text-muted-foreground">
         {refusal === "other_address" ? (
@@ -47,7 +46,7 @@ async function Invitation({ params }: Pick<PageProps<"/join/[token]">, "params">
   if (seen.status !== "open") return <Refused refusal={seen.status} back={back} />;
   return (
     <Card className="mt-8 w-full max-w-md">
-      <h1 className="text-xl font-semibold tracking-[-0.03em]">Join {seen.workspaceName}</h1>
+      <h1 className="text-xl font-bold tracking-[-0.025em]">Join {seen.workspaceName}</h1>
       <p className="mt-2 text-sm text-muted-foreground">You’ll see its tickets and its conversations, and your assistant will be able to work there with you.</p>
       <form action={joinAction.bind(null, token)} className="mt-5">
         <PrimaryButton type="submit">Join the workspace</PrimaryButton>
@@ -59,12 +58,10 @@ async function Invitation({ params }: Pick<PageProps<"/join/[token]">, "params">
 /** Where an invitation's link leads. */
 export default function JoinPage({ params }: PageProps<"/join/[token]">) {
   return (
-    <main className="relative isolate flex flex-1 flex-col items-center justify-center px-4 py-16">
-      <div aria-hidden className="absolute inset-x-0 top-0 -z-10 h-96 bg-glow" />
-      <Logo id="join" />
+    <Standalone>
       <Suspense fallback={<Loading />}>
         <Invitation params={params} />
       </Suspense>
-    </main>
+    </Standalone>
   );
 }

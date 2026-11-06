@@ -38,7 +38,7 @@ type Named = { id: string; name: string };
 
 function Choice({ name, label, value, options }: { name: string; label: string; value?: string; options: { value: string; label: string }[] }) {
   return (
-    <select name={name} defaultValue={value ?? ""} aria-label={label} className={INLINE_FIELD}>
+    <select name={name} defaultValue={value ?? ""} aria-label={label} className={`${INLINE_FIELD} w-full sm:w-auto`}>
       <option value="">{label}</option>
       {options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -54,9 +54,9 @@ const one = (query: InboxQuery, name: string) => (typeof query[name] === "string
 
 function Filters({ query, products, categories, team, tags }: { query: InboxQuery; products: Named[]; categories: Named[]; team: Named[]; tags: string[] }) {
   return (
-    <Form action="/tickets" className="flex flex-wrap items-center gap-2">
+    <Form action="/tickets" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
       <input type="hidden" name="status" value={statusTab(query)} />
-      <input name="q" defaultValue={one(query, "q")} placeholder="Search" aria-label="Search" className={`${INLINE_FIELD} min-w-48 flex-1`} />
+      <input name="q" defaultValue={one(query, "q")} placeholder="Search" aria-label="Search" className={`${INLINE_FIELD} col-span-2 min-w-48 flex-1`} />
       <Choice name="product" label="Any product" value={one(query, "product")} options={asOptions(products)} />
       <Choice name="assignee" label="Anyone" value={one(query, "assignee")} options={[{ value: "me", label: "Mine" }, { value: "none", label: "Unassigned" }, ...asOptions(team)]} />
       <Choice name="priority" label="Any priority" value={one(query, "priority")} options={TICKET_PRIORITIES.map((priority) => ({ value: priority, label: PRIORITY_NAMES[priority] }))} />

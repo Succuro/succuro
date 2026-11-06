@@ -63,7 +63,7 @@ describe("an API key", () => {
     await db.insert(user).values({ id: plain, name: "Bea", email: `${plain}@example.test` });
     await db.insert(member).values({ workspaceId, userId: plain, role: "member" });
     expect((await createApiKey(db, workspaceId, plain, "Mine", ["figures:read"])).ok).toBe(false);
-    expect(await revokeApiKey(db, workspaceId, plain, keyId)).toBe(false);
+    expect(await revokeApiKey(db, workspaceId, plain, keyId)).toMatchObject({ ok: false });
   });
 
   it("opens only its own workspace", async () => {
@@ -85,7 +85,7 @@ describe("an API key", () => {
 
   it("stops the moment it's revoked", async () => {
     const { workspaceId, userId, key, keyId } = await keyed();
-    expect(await revokeApiKey(db, workspaceId, userId, keyId)).toBe(true);
+    expect(await revokeApiKey(db, workspaceId, userId, keyId)).toMatchObject({ ok: true });
     expect((await post(key)).status).toBe(401);
   });
 
@@ -103,7 +103,7 @@ describe("an API key", () => {
   it("can't revoke across workspaces", async () => {
     const mine = await keyed();
     const theirs = await keyed();
-    expect(await revokeApiKey(db, mine.workspaceId, mine.userId, theirs.keyId)).toBe(false);
+    expect(await revokeApiKey(db, mine.workspaceId, mine.userId, theirs.keyId)).toMatchObject({ ok: false });
     expect((await post(theirs.key)).status).toBe(201);
   });
 });
@@ -234,7 +234,7 @@ describe("GET /api/v1/figures", () => {
     const response = await figures(key, "?days=2");
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body).toMatchObject({ timezone: "UTC", products: [{ slug: product.slug, name: product.name }] });
+    expect(body).toMatchObject({ workspace: { id: workspaceId, name: expect.any(String) }, timezone: "UTC", products: [{ slug: product.slug, name: product.name }] });
     expect(body.products[0].days).toHaveLength(2);
     expect(JSON.stringify(body)).not.toContain("customer.example");
   });

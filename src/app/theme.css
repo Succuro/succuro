@@ -1,147 +1,158 @@
 /*
  * ─────────────────────────────────────────────────────────────────────────────
- *  THEME
+ *  THEME: help on the way
  * ─────────────────────────────────────────────────────────────────────────────
  *
- *  Three palettes:
- *   • brand    a quiet teal kept low in chroma, for links, focus and what's fine;
- *   • warm     the one warm point on a page, for what needs a look; never a surface;
- *   • base     blue-black neutrals, dark first.
- *  Actions are monochrome (white on dark, dark on white), so colour is left to what it
- *  says. Components use the semantic tokens below or the brand, warm and base scales,
- *  never raw palette classes.
+ *  "Succuro" comes from the Latin succurrere, to run to someone's aid. The look borrows from the
+ *  people who come when you call: first-aid green, hi-vis yellow, the chequered band on a rescue
+ *  vehicle. Flat, solid, in daylight first.
+ *
+ *   • brand    responder green: actions, links, focus, what's fine;
+ *   • hivis    hi-vis yellow-green: a fill or a colour on dark, never text on a light surface;
+ *   • base     warm paper neutrals;
+ *   • alert    a signal red, only for what needs a look.
+ *
+ *  Components use the semantic tokens below or the brand and hivis scales, never raw palette
+ *  classes. Light by default; dark follows the system, through the block at the end.
  */
 
 :root {
+  color-scheme: light dark;
+
   /* 1. Palettes ------------------------------------------------------------ */
-  --brand-50: oklch(97.8% 0.008 195);
-  --brand-100: oklch(95% 0.016 195);
-  --brand-200: oklch(90.5% 0.03 195);
-  --brand-300: oklch(85% 0.048 195);
-  --brand-400: oklch(77% 0.068 195);
-  --brand-500: oklch(67.5% 0.085 195);
-  --brand-600: oklch(56.5% 0.09 195);
-  --brand-700: oklch(47.5% 0.08 195);
-  --brand-800: oklch(39.5% 0.065 195);
-  --brand-900: oklch(32% 0.05 195);
-  --brand-950: oklch(23.5% 0.035 195);
+  --brand-50: oklch(97% 0.02 168);
+  --brand-100: oklch(93.5% 0.04 168);
+  --brand-200: oklch(87% 0.07 168);
+  --brand-300: oklch(79% 0.105 168);
+  --brand-400: oklch(68% 0.125 168);
+  --brand-500: oklch(56% 0.115 168);
+  --brand-600: oklch(46% 0.095 168);
+  --brand-700: oklch(39% 0.08 168);
+  --brand-800: oklch(32% 0.065 168);
+  --brand-900: oklch(25.5% 0.048 168);
+  --brand-950: oklch(18% 0.03 168);
 
-  --warm-300: oklch(87% 0.075 62);
-  --warm-400: oklch(79% 0.125 58);
-  --warm-500: oklch(72% 0.15 52);
-  --warm-600: oklch(62% 0.16 45);
+  --hivis-200: oklch(96% 0.12 115);
+  --hivis-300: oklch(93.5% 0.17 116);
+  --hivis-400: oklch(91% 0.2 118);
+  --hivis-500: oklch(84% 0.19 120);
 
-  --base-50: oklch(98.4% 0.003 255);
-  --base-100: oklch(96.4% 0.005 255);
-  --base-200: oklch(92.2% 0.008 256);
-  --base-300: oklch(86.5% 0.012 257);
-  --base-400: oklch(70.5% 0.018 258);
-  --base-500: oklch(55.5% 0.021 259);
-  --base-600: oklch(44.5% 0.021 261);
-  --base-700: oklch(35% 0.02 263);
-  --base-800: oklch(25.5% 0.018 265);
-  --base-900: oklch(17.5% 0.016 266);
-  --base-950: oklch(12.5% 0.014 268);
+  --base-50: oklch(98.4% 0.005 100);
+  --base-100: oklch(96.2% 0.007 100);
+  --base-200: oklch(91.8% 0.009 105);
+  --base-300: oklch(85.5% 0.011 110);
+  --base-400: oklch(71% 0.013 130);
+  --base-500: oklch(52% 0.015 150);
+  --base-600: oklch(42% 0.016 160);
+  --base-700: oklch(33.5% 0.016 165);
+  --base-800: oklch(25% 0.015 165);
+  --base-900: oklch(18.5% 0.014 168);
+  --base-950: oklch(14% 0.012 168);
 
   /* Shape, layout & type */
-  --radius: 0.75rem;
+  --radius: 0.5rem;
   /* Max width of `.container` (header, pages, footer). */
   --content-width: 76rem;
-  --font-features: "ss01", "ss02";
+  --font-features: normal;
 
-  /* 2. Semantic tokens — light --------------------------------------------- */
-  --background: oklch(100% 0 0);
+  /* 2. Semantic tokens: light ---------------------------------------------- */
+  --background: var(--base-50);
   --foreground: var(--base-950);
-  --surface: var(--base-50);
+  --surface: var(--base-100);
   --card: oklch(100% 0 0);
   --card-foreground: var(--base-950);
   --popover: oklch(100% 0 0);
   --popover-foreground: var(--base-950);
 
-  /* Actions are monochrome; the brand colour is for links and focus. */
-  --primary: var(--base-950);
-  --primary-foreground: var(--base-50);
+  --primary: var(--brand-600);
+  --primary-hover: var(--brand-700);
+  --primary-foreground: oklch(100% 0 0);
   --secondary: var(--base-100);
   --secondary-foreground: var(--base-900);
   --muted: var(--base-100);
   --muted-foreground: var(--base-500);
-  --accent: var(--base-100);
+  --accent: var(--base-200);
   --accent-foreground: var(--base-900);
 
-  --link: var(--brand-700);
-  /* What is fine and what needs a look (darker in light mode, for contrast). */
+  --link: var(--brand-600);
+  /* What is fine and what needs a look. */
   --calm: var(--brand-600);
-  --alert: var(--warm-600);
-  /* The accent words of a heading, lit from above; the mark's arc, from its tail to its bead. */
-  --sheen-top: var(--base-900);
-  --sheen-bottom: var(--brand-600);
-  --mark-from: var(--base-400);
-  --mark-to: var(--base-950);
+  --alert: oklch(51% 0.18 30);
+  /* An internal note: hi-vis on paper, a marker pen over the page. */
+  --note: color-mix(in oklab, var(--hivis-400) 24%, var(--card));
+  --note-border: color-mix(in oklab, var(--hivis-500) 70%, var(--base-500));
 
-  --destructive: oklch(57.7% 0.245 27.325);
-  --success: oklch(59.6% 0.145 163.225);
-  --warning: var(--warm-500);
-  --info: var(--brand-600);
+  --destructive: var(--alert);
+  --success: var(--brand-600);
+  --warning: oklch(68% 0.15 75);
+  --info: var(--brand-500);
 
   --border: var(--base-200);
-  --input: var(--base-200);
+  --input: var(--base-300);
   --ring: var(--brand-500);
 
-  --chart-1: var(--brand-500);
-  --chart-2: var(--brand-300);
-  --chart-3: var(--warm-500);
-  --chart-4: var(--base-400);
-  --chart-5: var(--warm-300);
+  /* The chequered band: rescue green and hi-vis, in both modes. */
+  --check-a: var(--brand-800);
+  --check-b: var(--hivis-400);
+  --check: 4px;
 
-  --sidebar: var(--base-50);
+  --chart-1: var(--brand-500);
+  --chart-2: var(--hivis-500);
+  --chart-3: var(--brand-300);
+  --chart-4: var(--base-400);
+  --chart-5: var(--alert);
+
+  --sidebar: var(--base-100);
   --sidebar-foreground: var(--base-950);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: var(--base-100);
+  --sidebar-accent: var(--base-200);
   --sidebar-accent-foreground: var(--base-900);
   --sidebar-border: var(--base-200);
   --sidebar-ring: var(--ring);
 }
 
-/* 2b. Semantic tokens — dark (the default) --------------------------------- */
-.dark {
-  --background: oklch(10% 0.01 266);
-  --foreground: var(--base-50);
-  --surface: oklch(12.2% 0.011 266);
-  --card: oklch(13.6% 0.012 266);
-  --card-foreground: var(--base-50);
-  --popover: oklch(15.5% 0.015 266);
-  --popover-foreground: var(--base-50);
+/* 2b. Semantic tokens: dark, when the system asks for it ------------------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: var(--base-950);
+    --foreground: var(--base-50);
+    --surface: oklch(17% 0.013 168);
+    --card: oklch(19% 0.014 168);
+    --card-foreground: var(--base-50);
+    --popover: oklch(21.5% 0.016 168);
+    --popover-foreground: var(--base-50);
 
-  --primary: var(--base-50);
-  --primary-foreground: var(--base-950);
-  --secondary: oklch(20% 0.016 266);
-  --secondary-foreground: var(--base-50);
-  --muted: oklch(20% 0.016 266);
-  --muted-foreground: var(--base-400);
-  --accent: oklch(20% 0.016 266);
-  --accent-foreground: var(--base-50);
+    --primary: var(--hivis-400);
+    --primary-hover: var(--hivis-300);
+    --primary-foreground: var(--brand-950);
+    --secondary: oklch(24% 0.016 168);
+    --secondary-foreground: var(--base-50);
+    --muted: oklch(24% 0.016 168);
+    --muted-foreground: var(--base-400);
+    --accent: oklch(26% 0.018 168);
+    --accent-foreground: var(--base-50);
 
-  --link: var(--brand-200);
-  --calm: var(--brand-300);
-  --alert: var(--warm-400);
-  --sheen-top: var(--brand-50);
-  --sheen-bottom: var(--brand-400);
-  --mark-from: var(--brand-600);
-  --mark-to: var(--brand-100);
+    --link: var(--brand-300);
+    --calm: var(--brand-300);
+    --alert: oklch(73% 0.16 30);
+    --note: color-mix(in oklab, var(--hivis-400) 11%, var(--card));
+    --note-border: color-mix(in oklab, var(--hivis-400) 42%, transparent);
 
-  --destructive: oklch(70.4% 0.191 22.216);
-  --success: oklch(76.5% 0.177 163.223);
-  --warning: var(--warm-400);
-  --info: var(--brand-300);
+    --success: var(--brand-300);
+    --warning: oklch(80% 0.14 80);
+    --info: var(--brand-300);
 
-  --border: oklch(1 0 0 / 7.5%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: var(--brand-400);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 16%);
+    --ring: var(--hivis-400);
 
-  --sidebar: oklch(13.2% 0.013 266);
-  --sidebar-foreground: var(--base-50);
-  --sidebar-accent: oklch(20% 0.016 266);
-  --sidebar-accent-foreground: var(--base-50);
-  --sidebar-border: oklch(1 0 0 / 8%);
+    --check-a: var(--brand-700);
+
+    --sidebar: oklch(17% 0.013 168);
+    --sidebar-foreground: var(--base-50);
+    --sidebar-accent: oklch(24% 0.016 168);
+    --sidebar-accent-foreground: var(--base-50);
+    --sidebar-border: oklch(1 0 0 / 10%);
+  }
 }

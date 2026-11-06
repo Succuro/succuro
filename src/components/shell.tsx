@@ -8,10 +8,12 @@ import { SignOutButton } from "./sign-out-button";
 import { WorkspaceMenu } from "./workspace-menu";
 
 const NAV = [
-  { href: "/tickets", label: "Inbox" },
-  { href: "/tickets/screened", label: "Screened" },
-  { href: "/settings", label: "Settings" },
-];
+  { href: "/tickets", label: "Inbox", section: "inbox" },
+  { href: "/tickets/screened", label: "Screened", section: "screened" },
+  { href: "/settings", label: "Settings", section: "settings" },
+] as const;
+
+type Section = (typeof NAV)[number]["section"];
 
 /** Which workspace this is and the way to another. With nothing else to reach, there's nothing to choose and nothing shows. */
 async function WorkspaceSwitcher({ member }: { member: Member }) {
@@ -34,19 +36,19 @@ async function WhoIsSignedIn() {
   );
 }
 
-/** The frame of the app's pages: the mark, what's reachable, who is signed in. */
-export function Shell({ children }: { children: ReactNode }) {
+/** The frame of the app's pages: the band, the mark, what's reachable with where you are marked, who is signed in. */
+export function Shell({ section, children }: { section: Section; children: ReactNode }) {
   return (
-    <div className="relative isolate flex min-h-full flex-1 flex-col">
-      <div aria-hidden className="absolute inset-x-0 top-0 -z-10 h-96 bg-glow" />
-      <header className="border-b">
+    <div className="flex min-h-full flex-1 flex-col">
+      <div aria-hidden className="band-check" />
+      <header className="border-b bg-card">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-8 gap-y-2 px-4 py-3">
-          <Link href="/tickets" aria-label="Inbox">
-            <Logo id="header" />
+          <Link href="/tickets" aria-label="Inbox" className="rounded-md">
+            <Logo />
           </Link>
-          <nav className="order-last flex w-full flex-wrap items-center gap-x-5 gap-y-1 text-sm text-muted-foreground sm:order-none sm:w-auto sm:flex-1">
+          <nav aria-label="Main" className="order-last flex w-full flex-wrap items-center gap-x-1 gap-y-1 text-sm text-muted-foreground sm:order-none sm:w-auto sm:flex-1">
             {NAV.map((item) => (
-              <Link key={item.href} href={item.href} className="transition-colors hover:text-foreground">
+              <Link key={item.href} href={item.href} aria-current={item.section === section ? "page" : undefined} className="rounded-lg px-3 py-1.5 transition-colors hover:text-foreground aria-[current=page]:bg-accent aria-[current=page]:font-medium aria-[current=page]:text-foreground">
                 {item.label}
               </Link>
             ))}
@@ -61,11 +63,24 @@ export function Shell({ children }: { children: ReactNode }) {
   );
 }
 
+/** A page outside the app's frame, for someone signing in, joining or answering: the band and the mark over what it's for. */
+export function Standalone({ align = "center", children }: { align?: "center" | "top"; children: ReactNode }) {
+  return (
+    <>
+      <div aria-hidden className="band-check" />
+      <main className={`flex flex-1 flex-col items-center px-4 ${align === "center" ? "justify-center py-16" : "py-12"}`}>
+        <Logo />
+        {children}
+      </main>
+    </>
+  );
+}
+
 /** A page's heading and the sentence that says what it's for. */
 export function PageHeading({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="mb-8">
-      <h1 className="text-3xl font-semibold tracking-[-0.04em] md:text-4xl">{title}</h1>
+      <h1 className="text-3xl font-bold tracking-[-0.03em] md:text-4xl">{title}</h1>
       {children && <p className="mt-3 max-w-2xl text-muted-foreground">{children}</p>}
     </div>
   );

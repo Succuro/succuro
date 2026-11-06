@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { seeAsRequester, type RequesterMessage, type RequesterTicket } from "@/application/requester";
-import { Logo } from "@/components/logo";
-import { Loading } from "@/components/shell";
+import { Loading, Standalone } from "@/components/shell";
 import { ActionForm } from "@/components/try-button";
 import { Card, FIELD } from "@/components/ui";
 import { when } from "@/components/when";
@@ -17,7 +16,7 @@ export const metadata: Metadata = { title: "Your conversation", robots: { index:
 function Message({ message, team }: { message: RequesterMessage; team: string }) {
   const mine = message.from === "you";
   return (
-    <li className={`rounded-2xl border p-4 ${mine ? "bg-surface" : "bg-card"}`}>
+    <li className={`rounded-2xl border p-4 ${mine ? "bg-card" : "border-calm/30 bg-calm/5"}`}>
       <p className="text-xs text-muted-foreground">
         {mine ? "You" : team} · {when(message.at)}
       </p>
@@ -35,7 +34,7 @@ function Conversation({ ticket, token }: { ticket: RequesterTicket; token: strin
   const team = ticket.productName ?? "Support";
   return (
     <div className="mt-8 w-full max-w-2xl">
-      <h1 className="text-2xl font-semibold tracking-[-0.03em]">{ticket.subject}</h1>
+      <h1 className="text-2xl font-bold tracking-[-0.025em]">{ticket.subject}</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         {team} · Ticket #{ticket.number} · {STATUS_FOR_REQUESTER[ticket.status]}
       </p>
@@ -65,12 +64,10 @@ async function Content({ params }: Pick<PageProps<"/t/[token]">, "params">) {
 /** Where someone who wrote in reads the conversation and answers, without an account. */
 export default function RequesterPage({ params }: PageProps<"/t/[token]">) {
   return (
-    <main className="relative isolate flex flex-1 flex-col items-center px-4 py-12">
-      <div aria-hidden className="absolute inset-x-0 top-0 -z-10 h-96 bg-glow" />
-      <Logo id="requester" />
+    <Standalone align="top">
       <Suspense fallback={<Loading />}>
         <Content params={params} />
       </Suspense>
-    </main>
+    </Standalone>
   );
 }

@@ -76,7 +76,7 @@ export async function TeamSection({ seat }: { seat: Seat }) {
   const lastOwner = refusalToLeave(team, seat.userId);
   return (
     <Card>
-      <h2 className="font-semibold tracking-[-0.02em]">Team</h2>
+      <h2 className="font-bold tracking-[-0.015em]">Team</h2>
       <p className="mt-1 text-sm text-muted-foreground">Who works in {seat.workspaceName}. Only a person grants access, here: no assistant can invite or remove anyone.</p>
       <ul className="mt-3 divide-y">
         {people.map((person) => (

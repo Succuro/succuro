@@ -5,7 +5,7 @@ import { productsOf, type Product } from "@/application/products";
 import { Loading, PageHeading, Shell } from "@/components/shell";
 import { SettingsNav } from "@/components/settings-nav";
 import { ActionForm, ConfirmButton, CopyButton } from "@/components/try-button";
-import { Card, Code, FIELD, Labelled } from "@/components/ui";
+import { Card, Code, EmptyState, FIELD, Labelled } from "@/components/ui";
 import { managesSettings } from "@/domain/team";
 import { currentSeat } from "@/infrastructure/auth/session";
 import { db } from "@/infrastructure/db/client";
@@ -47,7 +47,7 @@ function ProductCard({ product, addresses, origin, mayChange }: { product: Produ
   const snippet = snippetOf(product, origin);
   return (
     <Card>
-      <h2 className="flex items-center gap-2 font-semibold tracking-[-0.02em]">
+      <h2 className="flex items-center gap-2 font-bold tracking-[-0.015em]">
         <span aria-hidden className="inline-block size-2.5 rounded-full" style={{ backgroundColor: product.colour }} />
         {product.name}
       </h2>
@@ -90,10 +90,10 @@ async function Content() {
       {products.map((product) => (
         <ProductCard key={product.id} product={product} addresses={addresses.filter(({ productId }) => productId === product.id)} origin={origin} mayChange={mayChange} />
       ))}
-      {products.length === 0 && <p className="text-sm text-muted-foreground">No product yet. Add the first one: its tickets, address and widget all start here.</p>}
+      {products.length === 0 && <EmptyState title="No product yet">Add the first one: its tickets, address and widget all start here.</EmptyState>}
       {mayChange ? (
         <Card>
-          <h2 className="mb-4 font-semibold tracking-[-0.02em]">Add a product</h2>
+          <h2 className="mb-4 font-bold tracking-[-0.015em]">Add a product</h2>
           <ActionForm action={createProductAction} submit="Add the product" busy="…">
             <ProductFields />
           </ActionForm>
@@ -108,9 +108,9 @@ async function Content() {
 /** Brands or projects inside a workspace, so one company runs several products from one inbox. */
 export default function ProductsPage() {
   return (
-    <Shell>
+    <Shell section="settings">
       <PageHeading title="Products">Each with its own addresses, sender name and widget, all in one inbox.</PageHeading>
-      <SettingsNav />
+      <SettingsNav current="/settings/products" />
       <Suspense fallback={<Loading />}>
         <Content />
       </Suspense>

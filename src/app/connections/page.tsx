@@ -19,8 +19,8 @@ async function Catalogue() {
         const mine = connections.filter((connection) => connection.kind === connector.kind);
         return (
           <li key={connector.kind}>
-            <Link href={`/connections/${connector.kind}`} className="card-sheen flex h-full flex-col rounded-2xl border bg-card p-5 transition-colors hover:border-foreground/20">
-              <span className="flex items-center gap-2 font-medium tracking-[-0.02em]">
+            <Link href={`/connections/${connector.kind}`} className="flex h-full flex-col rounded-2xl border bg-card p-5 transition-colors hover:border-primary/50">
+              <span className="flex items-center gap-2 font-semibold tracking-[-0.015em]">
                 {mine.length > 0 && <StatusDot status={mine.some((connection) => connection.status === "failing") ? "failing" : "connected"} />}
                 {connector.name}
               </span>
@@ -37,9 +37,9 @@ async function Catalogue() {
 /** The services a workspace can connect. */
 export default function ConnectionsPage() {
   return (
-    <Shell>
+    <Shell section="settings">
       <PageHeading title="Connections">What the desk sends and receives mail through. Keys are typed here, never in a conversation, and stay sealed.</PageHeading>
-      <SettingsNav />
+      <SettingsNav current="/connections" />
       <Suspense fallback={<Loading />}>
         <Catalogue />
       </Suspense>

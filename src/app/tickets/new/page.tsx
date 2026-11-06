@@ -59,7 +59,7 @@ async function Form() {
 /** For a request that came in some other way: a call, a chat. Nothing is sent to them. */
 export default function NewTicketPage() {
   return (
-    <Shell>
+    <Shell section="inbox">
       <PageHeading title="New ticket">For a request that came in some other way. Nothing is sent to them.</PageHeading>
       <Suspense fallback={<Loading />}>
         <Form />

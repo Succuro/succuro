@@ -52,7 +52,7 @@ function Waiting({ number, message }: { number: number; message: TeamMessage }) 
 function Entry({ number, message, requester }: { number: number; message: TeamMessage; requester: string }) {
   if (message.kind === "system") return <li className="px-1 text-xs text-muted-foreground">{`${when(message.createdAt)}: ${message.body}`}</li>;
   const waiting = message.kind === "agent" && (message.deliveryState === "draft" || message.deliveryState === "failed");
-  const styles = { customer: "bg-surface", agent: "bg-card", note: "border-alert/40 bg-alert/5" }[message.kind];
+  const styles = { customer: "bg-card", agent: "border-calm/30 bg-calm/5", note: "border-note-border bg-note" }[message.kind];
   const who = { customer: requester, agent: message.authorName ?? "The team", note: `Internal note, ${message.authorName ?? "the team"}` }[message.kind];
   return (
     <li className={`rounded-2xl border p-4 ${styles}`} data-kind={message.kind}>

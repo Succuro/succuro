@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { apiKeysOf } from "@/application/api-keys";
 import { Loading, PageHeading, Shell } from "@/components/shell";
 import { SettingsNav } from "@/components/settings-nav";
-import { Card, Code, QuietButton } from "@/components/ui";
+import { Card, Code, EmptyState, QuietButton } from "@/components/ui";
 import { when } from "@/components/when";
 import { SCOPE_NAMES, type ApiScope } from "@/domain/api-scopes";
 import { managesSettings } from "@/domain/team";
@@ -33,6 +33,7 @@ async function Keys() {
           <Code>GET {new URL("/api/v1/figures?days=30", base).toString()}</Code>
         </div>
       </Card>
+      {keys.length === 0 && <EmptyState title="No key yet">A key lets one app open tickets or read figures, and nothing else.</EmptyState>}
       {keys.length > 0 && (
         <ul className="divide-y rounded-2xl border bg-card">
           {keys.map((key) => (
@@ -57,9 +58,9 @@ async function Keys() {
 /** Keys other apps reach the workspace with: to open tickets, to read figures, or both. */
 export default function KeysPage() {
   return (
-    <Shell>
+    <Shell section="settings">
       <PageHeading title="API keys">For your apps to open tickets and your dashboards to read figures. Each key does only what it was given.</PageHeading>
-      <SettingsNav />
+      <SettingsNav current="/keys" />
       <Suspense fallback={<Loading />}>
         <Keys />
       </Suspense>

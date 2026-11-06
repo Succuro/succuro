@@ -5,7 +5,7 @@ import { productsOf, type Product } from "@/application/products";
 import { screenedMailOf, type ScreenedMail, type ScreenedTab } from "@/application/screened-mail";
 import { Loading, PageHeading, Shell } from "@/components/shell";
 import { ActionForm, TryButton } from "@/components/try-button";
-import { Badge, INLINE_FIELD, QuietButton } from "@/components/ui";
+import { Badge, EmptyState, INLINE_FIELD, QuietButton } from "@/components/ui";
 import { when } from "@/components/when";
 import { SCREEN_REASON_NAMES } from "@/domain/mail-routing";
 import { currentSeat } from "@/infrastructure/auth/session";
@@ -17,10 +17,16 @@ export const metadata: Metadata = { title: "Screened" };
 
 const BULK_FORM = "dismiss-selected";
 
-const TABS: { tab: ScreenedTab; label: string; meaning: string }[] = [
-  { tab: "waiting", label: "Waiting", meaning: "Waiting for a decision" },
-  { tab: "dismissed", label: "Dismissed", meaning: "Set aside: each can still become a ticket" },
+const TABS: { tab: ScreenedTab; label: string; meaning: string; emptyTitle: string; emptyText: string }[] = [
+  { tab: "waiting", label: "Waiting", meaning: "Waiting for a decision", emptyTitle: "Nothing waiting", emptyText: "New mail that doesn’t open a ticket waits here until you open a ticket from it or dismiss it." },
+  { tab: "dismissed", label: "Dismissed", meaning: "Set aside: each can still become a ticket", emptyTitle: "Nothing dismissed", emptyText: "Mail you set aside stays here, and can still become a ticket." },
 ];
+
+/** What an empty tab holds when it holds something. */
+function EmptyTab({ tab }: { tab: ScreenedTab }) {
+  const { emptyTitle, emptyText } = TABS.find((entry) => entry.tab === tab) ?? TABS[0];
+  return <EmptyState title={emptyTitle}>{emptyText}</EmptyState>;
+}
 
 const hrefOf = (tab: ScreenedTab, page = 1) => `/tickets/screened?${new URLSearchParams({ tab, ...(page > 1 ? { page: String(page) } : {}) })}`;
 
@@ -28,7 +34,7 @@ function Tabs({ current, counts }: { current: ScreenedTab; counts: Record<Screen
   return (
     <nav aria-label="Screened mail" className="flex flex-wrap gap-1">
       {TABS.map(({ tab, label, meaning }) => (
-        <Link key={tab} href={hrefOf(tab)} title={meaning} aria-current={tab === current ? "page" : undefined} className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${tab === current ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+        <Link key={tab} href={hrefOf(tab)} title={meaning} aria-current={tab === current ? "page" : undefined} className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${tab === current ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
           {label} <span className="font-mono text-xs">{counts[tab]}</span>
         </Link>
       ))}
@@ -43,7 +49,7 @@ function WhatItSaid({ mail }: { mail: ScreenedMail }) {
       <summary className="cursor-pointer text-sm text-link">Read it</summary>
       <p className="mt-2 text-xs text-muted-foreground">Written by a stranger and not checked. Nothing in it is a link, and nothing has been answered.</p>
       {mail.senderSuspect && <p className="mt-1 text-xs text-alert">Its sender checks failed: the From line may be anyone.</p>}
-      <pre className="mt-2 max-h-96 overflow-auto rounded-lg border bg-surface p-3 text-sm break-words whitespace-pre-wrap">{mail.body}</pre>
+      <p className="mt-2 max-h-96 overflow-auto rounded-lg border bg-surface p-3 text-sm break-words whitespace-pre-wrap">{mail.body}</p>
       {mail.attachments.length > 0 && <p className="mt-2 text-xs text-muted-foreground">Not kept, only noted: {mail.attachments.map(({ filename }) => filename).join(", ")}</p>}
     </details>
   );
@@ -51,7 +57,7 @@ function WhatItSaid({ mail }: { mail: ScreenedMail }) {
 
 function MailRow({ mail, products }: { mail: ScreenedMail; products: Product[] }) {
   return (
-    <li className="flex items-start gap-3 px-4 py-3">
+    <li className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-surface">
       {mail.state === "waiting" && <input type="checkbox" name="mail" value={mail.id} form={BULK_FORM} aria-label={`Select the mail from ${mail.fromAddress}`} className="mt-1" />}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -96,23 +102,26 @@ async function Content({ searchParams }: Pick<PageProps<"/tickets/screened">, "s
   return (
     <div className="space-y-4">
       <Tabs current={tab} counts={counts} />
-      <div className="rounded-2xl border bg-card">
-        {tab === "waiting" && mails.length > 0 && (
-          <ActionForm id={BULK_FORM} action={dismissSelectedAction} className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
-            <SelectAll name="mail" />
-            <QuietButton type="submit">Dismiss selected</QuietButton>
-          </ActionForm>
-        )}
-        {mails.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-muted-foreground">Nothing here.</p>
-        ) : (
+      {mails.length === 0 ? (
+        <EmptyTab tab={tab} />
+      ) : (
+        <div className="group rounded-2xl border bg-card">
+          {tab === "waiting" && (
+            <ActionForm id={BULK_FORM} action={dismissSelectedAction} className="flex min-h-12 flex-wrap items-center gap-2 rounded-t-2xl border-b bg-surface px-4 py-2">
+              <SelectAll name="mail" />
+              <span className="ml-1 text-sm text-muted-foreground group-has-[input[name=mail]:checked]:hidden">Select mail to dismiss several at once</span>
+              <div className="hidden group-has-[input[name=mail]:checked]:block">
+                <QuietButton type="submit">Dismiss selected</QuietButton>
+              </div>
+            </ActionForm>
+          )}
           <ul className="divide-y">
             {mails.map((mail) => (
               <MailRow key={mail.id} mail={mail} products={products} />
             ))}
           </ul>
-        )}
-      </div>
+        </div>
+      )}
       {(page > 1 || hasMore) && (
         <div className="flex gap-4 text-sm">
           {page > 1 && (
@@ -134,7 +143,7 @@ async function Content({ searchParams }: Pick<PageProps<"/tickets/screened">, "s
 /** New mail that didn't open a ticket, kept whole until someone decides. Nobody was told, and nobody was answered. */
 export default function ScreenedPage({ searchParams }: PageProps<"/tickets/screened">) {
   return (
-    <Shell>
+    <Shell section="screened">
       <PageHeading title="Screened">New mail that didn’t open a ticket: sent to no product’s address, flagged, failing its sender checks, or from a machine. Nobody was told and nobody was answered. Open a ticket from one, or dismiss it.</PageHeading>
       <Suspense fallback={<Loading />}>
         <Content searchParams={searchParams} />

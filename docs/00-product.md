@@ -95,10 +95,11 @@ The MCP server is at `/api/mcp`, over streamable HTTP. An assistant registers it
 
 ## 6. Figures
 
-`GET /api/v1/figures?days=30&product=acme-app`, with a key holding the `figures:read` scope. `days` runs from 1 to 365, 30 by default. `product` is optional. There are no names, addresses or words in it.
+`GET /api/v1/figures?days=30&product=acme-app`, with a key holding the `figures:read` scope. `days` runs from 1 to 365, 30 by default. `product` is optional. There are no people's names, addresses or words in it. It names the workspace the key opens, so an app can tell one key from another.
 
 ```json
 {
+  "workspace": { "id": "…", "name": "Acme" },
   "from": "2026-11-04",
   "to": "2026-11-05",
   "timezone": "UTC",

@@ -234,7 +234,7 @@ describe("GET /api/v1/figures", () => {
     const response = await figures(key, "?days=2");
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body).toMatchObject({ timezone: "UTC", products: [{ slug: product.slug, name: product.name }] });
+    expect(body).toMatchObject({ workspace: { id: workspaceId, name: expect.any(String) }, timezone: "UTC", products: [{ slug: product.slug, name: product.name }] });
     expect(body.products[0].days).toHaveLength(2);
     expect(JSON.stringify(body)).not.toContain("customer.example");
   });

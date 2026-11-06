@@ -30,10 +30,17 @@ export async function failStuckReplies(db: Database, now: Date): Promise<number>
     .select({ id: message.id, workspaceId: message.workspaceId })
     .from(message)
     .where(and(eq(message.deliveryState, "sending"), lt(message.updatedAt, before)));
+  let marked = 0;
   for (const reply of stuck) {
-    await withWorkspace(db, reply.workspaceId, (tx) => tx.update(message).set({ deliveryState: "failed", deliveryError: STUCK }).where(and(eq(message.id, reply.id), eq(message.deliveryState, "sending"))));
+    // One workspace's trouble is none of the others': this one stays "sending", so the next run tries it again.
+    try {
+      await withWorkspace(db, reply.workspaceId, (tx) => tx.update(message).set({ deliveryState: "failed", deliveryError: STUCK }).where(and(eq(message.id, reply.id), eq(message.deliveryState, "sending"))));
+      marked += 1;
+    } catch (error) {
+      console.error("A stuck reply couldn’t be marked", reply.id, error instanceof Error ? error.message : error);
+    }
   }
   // Asked again next time: the answer that sent this run here is now out of date.
   scheduledWorkChanged();
-  return stuck.length;
+  return marked;
 }

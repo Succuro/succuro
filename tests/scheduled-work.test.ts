@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/cron/stuck-replies/route";
 import { replyNow } from "@/application/replies";
@@ -100,5 +100,22 @@ describe("the job's address", () => {
   it("does its work when a reply is stuck", async () => {
     await inFlight(new Date(Date.now() - 16 * 60_000));
     expect(await (await call("Bearer cron-secret")).json()).toEqual({ failed: 1 });
+  });
+});
+
+describe("a stuck reply that can't be marked", () => {
+  it("doesn't hold back the others, in any workspace, and comes round again on the next run", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const [broken, fine] = [await inFlight(), await inFlight()];
+    const later = new Date(NOW.getTime() + 60 * 60_000);
+    await db.execute(sql.raw(`alter table message add constraint fail_for_a_test check (id <> '${(await broken.state()).id}' or delivery_state <> 'failed') not valid`));
+    const marked = await failStuckReplies(db, later).finally(() => db.execute(sql`alter table message drop constraint fail_for_a_test`));
+    expect(marked).toBe(1);
+    expect((await fine.state()).deliveryState).toBe("failed");
+    expect((await broken.state()).deliveryState).toBe("sending");
+    expect(error).toHaveBeenCalled();
+    expect(await failStuckReplies(db, later)).toBe(1);
+    expect((await broken.state()).deliveryState).toBe("failed");
+    error.mockRestore();
   });
 });
